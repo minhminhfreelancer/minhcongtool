@@ -7,8 +7,20 @@ binding = "DB"
 database_name = "content-assistant"
 database_id = "YOUR_DATABASE_ID"
 
-[vars]
-ENVIRONMENT = "production"
+[build]
+command = "npm run build"
+
+[build.upload]
+format = "modules"
+dir = "dist"
+main = "worker/index.ts"
 
 [site]
 bucket = "./dist"
+
+[dev]
+port = 8787
+
+[miniflare]
+port = 8787
+watch = true

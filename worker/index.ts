@@ -1,6 +1,4 @@
-import { HTMLRewriter } from "@cloudflare/workers-types";
-
-export interface Env {
+interface Env {
   DB: D1Database;
 }
 
@@ -64,28 +62,8 @@ async function handleFetchContent(request: Request): Promise<Response> {
       );
     }
 
-    let content = "";
-    const rewriter = new HTMLRewriter().on(
-      "article, .content, .post-content, .entry-content",
-      {
-        element(element) {
-          element.onEnd(() => {
-            content += element.innerHTML;
-          });
-        },
-        text(text) {
-          content += text.text;
-        },
-      },
-    );
-
-    await rewriter.transform(response).text();
-
-    content = content
-      .replace(/<\/?[^>]+(>|$)/g, "\n")
-      .replace(/\s+/g, " ")
-      .replace(/\n\s*\n/g, "\n\n")
-      .trim();
+    const html = await response.text();
+    const content = extractContent(html);
 
     return new Response(JSON.stringify({ content }), {
       headers: {
@@ -138,4 +116,16 @@ async function handleSearchHistory(
       },
     );
   }
+}
+
+function extractContent(html: string): string {
+  // Simple content extraction
+  const content = html
+    .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, "") // Remove scripts
+    .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, "") // Remove styles
+    .replace(/<[^>]+>/g, " ") // Remove HTML tags
+    .replace(/\s+/g, " ") // Normalize whitespace
+    .trim();
+
+  return content;
 }
