@@ -1,17 +1,23 @@
 import { SearchResult } from "@/types/search";
+import { extractContent } from "./contentExtractor";
 
 export async function searchGoogle(
   query: string,
   countryCode: string,
   apiKey: string,
   cx: string,
+  onProgress?: (message: string) => void,
 ): Promise<SearchResult[]> {
+  onProgress?.("Starting search process...");
+  onProgress?.(`Searching for "${query}"...`);
   const url = new URL("https://www.googleapis.com/customsearch/v1");
   url.searchParams.append("key", apiKey);
   url.searchParams.append("cx", cx);
   url.searchParams.append("q", query);
-  url.searchParams.append("gl", countryCode); // Country restriction
-  url.searchParams.append("num", "10"); // Number of results
+  url.searchParams.append("gl", countryCode);
+  url.searchParams.append("num", "10");
+  // Add cache buster
+  url.searchParams.append("_", Date.now().toString());
 
   try {
     const response = await fetch(url.toString());
@@ -21,13 +27,42 @@ export async function searchGoogle(
       throw new Error(data.error?.message || "Search failed");
     }
 
-    return (
-      data.items?.map((item: any) => ({
-        url: item.link,
-        title: item.title,
-        snippet: item.snippet,
-      })) || []
-    );
+    const results = data.items || [];
+    const processedResults = [];
+
+    for (let i = 0; i < results.length; i++) {
+      const item = results[i];
+      onProgress?.(`Processing ${i + 1} of ${results.length}: ${item.link}`);
+
+      try {
+        const { content, error } = await fetchPageContent(item.link, (msg) =>
+          onProgress?.(`[${i + 1}/${results.length}] ${msg}`),
+        );
+
+        if (error) {
+          console.warn(`Warning fetching ${item.link}:`, error);
+        }
+
+        processedResults.push({
+          url: item.link,
+          title: item.title,
+          snippet: content || item.snippet,
+          error: error,
+        });
+      } catch (error) {
+        console.error(`Error fetching ${item.link}:`, error);
+        processedResults.push({
+          url: item.link,
+          title: item.title,
+          snippet: item.snippet,
+          error:
+            error instanceof Error ? error.message : "Failed to fetch content",
+        });
+      }
+    }
+
+    onProgress?.("Search complete! Processing results...");
+    return processedResults;
   } catch (error) {
     console.error("Google search failed:", error);
     throw error;
@@ -36,22 +71,32 @@ export async function searchGoogle(
 
 export async function fetchPageContent(
   url: string,
+  onProgress?: (message: string) => void,
 ): Promise<{ content: string; error?: string }> {
+  onProgress?.(`Starting content fetch from ${url}`);
+
   try {
-    // Use a CORS proxy to fetch the content
-    const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`;
-    const response = await fetch(proxyUrl);
+    const serverUrl =
+      import.meta.env.VITE_SERVER_URL || "http://localhost:3001";
+    const response = await fetch(
+      `${serverUrl}/fetch-content?url=${encodeURIComponent(url)}`,
+      {
+        headers: {
+          "Cache-Control": "no-cache",
+          Pragma: "no-cache",
+        },
+      },
+    );
+
     if (!response.ok) {
-      return {
-        content: "",
-        error: `Failed to fetch: ${response.status} ${response.statusText}`,
-      };
+      throw new Error(
+        `Failed to fetch: ${response.status} ${response.statusText}`,
+      );
     }
-    const content = await response.text();
-    if (!content.trim()) {
-      return { content: "", error: "Empty content received" };
-    }
-    return { content };
+
+    const data = await response.json();
+    onProgress?.("Content extracted successfully");
+    return { content: data.content };
   } catch (error) {
     console.error("Error fetching content:", error);
     return {
@@ -63,112 +108,7 @@ export async function fetchPageContent(
 
 export function htmlToMarkdown(html: string): string {
   try {
-    const parser = new DOMParser();
-    const doc = parser.parseFromString(html, "text/html");
-
-    // Remove unwanted elements
-    doc
-      .querySelectorAll("script, style, nav, header, footer, iframe, noscript")
-      .forEach((el) => el.remove());
-
-    // Extract main content
-    const mainContent =
-      doc.querySelector(
-        "main, article, .content, #content, .post, .entry-content, .article-content, .post-content",
-      ) || doc.body;
-
-    function processNode(node: Node): string {
-      if (node.nodeType === Node.TEXT_NODE) {
-        return node.textContent?.trim() || "";
-      }
-
-      if (node.nodeType === Node.ELEMENT_NODE) {
-        const element = node as Element;
-        let result = "";
-
-        // Handle links
-        if (element.tagName === "A") {
-          const href = (element as HTMLAnchorElement).href;
-          const text = element.textContent?.trim();
-          if (text && href && !href.startsWith("javascript:")) {
-            return `[${text}](${href})`;
-          }
-          return text || "";
-        }
-
-        // Handle headings
-        if (/^H[1-6]$/.test(element.tagName)) {
-          const level = element.tagName[1];
-          const content = Array.from(element.childNodes)
-            .map((child) => processNode(child))
-            .join("");
-          return `${"#".repeat(parseInt(level))} ${content}\n\n`;
-        }
-
-        // Handle paragraphs
-        if (element.tagName === "P") {
-          const content = Array.from(element.childNodes)
-            .map((child) => processNode(child))
-            .join("");
-          return content ? `${content}\n\n` : "";
-        }
-
-        // Handle lists
-        if (element.tagName === "UL" || element.tagName === "OL") {
-          return (
-            Array.from(element.children)
-              .map((li, index) => {
-                const content = processNode(li);
-                const prefix =
-                  element.tagName === "UL" ? "- " : `${index + 1}. `;
-                return `${prefix}${content}\n`;
-              })
-              .join("") + "\n"
-          );
-        }
-
-        // Handle list items
-        if (element.tagName === "LI") {
-          return Array.from(element.childNodes)
-            .map((child) => processNode(child))
-            .join(" ");
-        }
-
-        // Handle blockquotes
-        if (element.tagName === "BLOCKQUOTE") {
-          const content = Array.from(element.childNodes)
-            .map((child) => processNode(child))
-            .join("");
-          return content ? `> ${content.replace(/\n/g, "\n> ")}\n\n` : "";
-        }
-
-        // Handle images - skip base64 images
-        if (element.tagName === "IMG") {
-          const src = element.getAttribute("src");
-          const alt = element.getAttribute("alt") || "";
-          if (src && !src.startsWith("data:")) {
-            // Only include images with actual URLs, not base64 data
-            return `![${alt}](${src})\n\n`;
-          }
-          return "";
-        }
-
-        // Process other elements recursively
-        return Array.from(element.childNodes)
-          .map((child) => processNode(child))
-          .join(" ");
-      }
-
-      return "";
-    }
-
-    const markdown = processNode(mainContent);
-
-    // Clean up extra whitespace and line breaks
-    return markdown
-      .replace(/\n{3,}/g, "\n\n") // Replace 3+ newlines with 2
-      .replace(/[ \t]+\n/g, "\n") // Remove trailing whitespace
-      .trim();
+    return extractContent(html);
   } catch (error) {
     console.error("Error converting HTML to Markdown:", error);
     return "";

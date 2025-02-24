@@ -1,95 +1,128 @@
+interface ModelPricing {
+  input: number;
+  output: number;
+  input128k?: number;
+  output128k?: number;
+}
+
 export interface ModelInfo {
   name: string;
   tokenLimit: number;
   requestsPerMin: number;
   requestsPerDay: number;
   features: string[];
+  pricing?: ModelPricing;
 }
 
-export const AVAILABLE_MODELS: ModelInfo[] = [
+// Helper function to deduplicate models
+function deduplicateModels(models: ModelInfo[]): ModelInfo[] {
+  const seen = new Set<string>();
+  return models.filter((model) => {
+    if (seen.has(model.name)) {
+      return false;
+    }
+    seen.add(model.name);
+    return true;
+  });
+}
+
+export const AVAILABLE_MODELS: ModelInfo[] = deduplicateModels([
+  // Gemini 2.0 Models
   {
-    name: "chat-bard",
-    tokenLimit: Infinity,
-    requestsPerMin: 18,
-    requestsPerDay: 2520000,
-    features: ["Chat completion", "Basic conversation"],
+    name: "gemini-2.0-flash",
+    tokenLimit: 128000,
+    requestsPerMin: 2000,
+    requestsPerDay: 1500,
+    features: [
+      "Multimodal understanding",
+      "Realtime streaming",
+      "Native tool use",
+    ],
+    pricing: {
+      input: 0.1,
+      output: 0.4,
+    },
   },
   {
-    name: "gemini-1.0-pro",
-    tokenLimit: 32000,
-    requestsPerMin: 15,
-    requestsPerDay: 30,
-    features: ["Text generation", "Code completion", "Chat"],
+    name: "gemini-2.0-flash-lite-preview-02-05",
+    tokenLimit: 128000,
+    requestsPerMin: 4000,
+    requestsPerDay: 1500,
+    features: ["Long Context", "Realtime streaming", "Native tool use"],
+    pricing: {
+      input: 0.075,
+      output: 0.3,
+    },
   },
+  {
+    name: "gemini-2.0-pro-exp-02-05",
+    tokenLimit: 128000,
+    requestsPerMin: 5,
+    requestsPerDay: 50,
+    features: [
+      "Multimodal understanding",
+      "Realtime streaming",
+      "Native tool use",
+    ],
+    pricing: {
+      input: 0,
+      output: 0,
+    },
+  },
+  {
+    name: "gemini-2.0-flash-thinking-exp-01-21",
+    tokenLimit: 128000,
+    requestsPerMin: 10,
+    requestsPerDay: 1500,
+    features: ["Multimodal understanding", "Reasoning", "Coding"],
+    pricing: {
+      input: 0,
+      output: 0,
+    },
+  },
+  // Gemini 1.5 Models
   {
     name: "gemini-1.5-pro",
-    tokenLimit: 32000,
-    requestsPerMin: 2,
+    tokenLimit: 128000,
+    requestsPerMin: 1000,
     requestsPerDay: 50,
-    features: ["Advanced reasoning", "Long context", "Improved accuracy"],
-  },
-  {
-    name: "gemini-1.5-pro-exp",
-    tokenLimit: 1000000,
-    requestsPerMin: 5,
-    requestsPerDay: 100,
-    features: ["Experimental features", "Advanced reasoning", "Long context"],
-  },
-  {
-    name: "gemini-2.0-pro-exp",
-    tokenLimit: 32000,
-    requestsPerMin: 2,
-    requestsPerDay: 50,
-    features: ["Next-gen reasoning", "Enhanced context", "Best accuracy"],
+    features: ["Long Context", "Complex Reasoning", "Math Reasoning"],
+    pricing: {
+      input: 1.25,
+      output: 5.0,
+      input128k: 2.5,
+      output128k: 10.0,
+    },
   },
   {
     name: "gemini-1.5-flash",
-    tokenLimit: 1000000,
-    requestsPerMin: 15,
-    requestsPerDay: 1.5,
-    features: ["Fast responses", "High throughput"],
+    tokenLimit: 128000,
+    requestsPerMin: 2000,
+    requestsPerDay: 1500,
+    features: [
+      "Image understanding",
+      "Video understanding",
+      "Audio understanding",
+    ],
+    pricing: {
+      input: 0.075,
+      output: 0.3,
+      input128k: 0.15,
+      output128k: 0.6,
+    },
   },
   {
-    name: "gemini-1.5-flash-exp",
-    tokenLimit: 1000000,
-    requestsPerMin: 5,
-    requestsPerDay: 1.5,
-    features: ["Experimental flash", "Fast responses"],
-  },
-  {
-    name: "gemini-2.0-flash",
-    tokenLimit: 1000000,
-    requestsPerMin: 15,
-    requestsPerDay: 1.5,
-    features: ["Next-gen flash", "Maximum throughput"],
-  },
-  {
-    name: "gemini-2.0-flash-lite",
-    tokenLimit: 1000000,
-    requestsPerMin: 30,
-    requestsPerDay: 1.5,
-    features: ["Lightweight flash", "Fast responses"],
-  },
-  {
-    name: "gemini-2.0-flash-exp",
-    tokenLimit: 4000000,
-    requestsPerMin: 10,
-    requestsPerDay: Infinity,
-    features: ["Experimental next-gen flash", "Enhanced throughput"],
-  },
-  {
-    name: "gemini-2.0-flash-exp-audio",
-    tokenLimit: 4000000,
-    requestsPerMin: 2,
-    requestsPerDay: Infinity,
-    features: ["Audio processing", "Fast responses"],
-  },
-  {
-    name: "gemini-2.0-flash-exp-image",
-    tokenLimit: 4000000,
-    requestsPerMin: 2,
-    requestsPerDay: Infinity,
-    features: ["Image processing", "Fast responses"],
+    name: "gemini-1.5-flash-8b",
+    tokenLimit: 128000,
+    requestsPerMin: 4000,
+    requestsPerDay: 1500,
+    features: ["Low latency", "Multilingual", "Summarization"],
+    pricing: {
+      input: 0.0375,
+      output: 0.15,
+      input128k: 0.075,
+      output128k: 0.3,
+    },
   },
   {
     name: "med-gemini",
@@ -98,4 +131,4 @@ export const AVAILABLE_MODELS: ModelInfo[] = [
     requestsPerDay: 50,
     features: ["Medical domain", "Healthcare assistance"],
   },
-];
+]);

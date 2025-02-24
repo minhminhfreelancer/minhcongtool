@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Search } from "lucide-react";
+import { Search, ArrowLeft, Download } from "lucide-react";
 import { COUNTRY_CODES } from "@/types/search";
 import { SearchResult } from "@/types/search";
 import {
@@ -11,67 +11,96 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { searchGoogle, fetchPageContent, htmlToMarkdown } from "@/lib/search";
+import {
+  searchGoogle,
+  fetchPageContent,
+  htmlToMarkdown,
+  downloadTextFile,
+} from "@/lib/search";
+import { ModelConfig, SearchConfig } from "../ContentWizard";
 
 export interface Step2SearchProps {
-  config: {
-    apiKey: string;
-    searchEngineId: string;
-  };
+  config: SearchConfig;
+  modelConfig: ModelConfig;
   onNext: (results: SearchResult[]) => void;
+  onBack: () => void;
 }
 
-const Step2Search = ({ config, onNext }: Step2SearchProps) => {
+const Step2Search = ({
+  config,
+  modelConfig,
+  onNext,
+  onBack,
+}: Step2SearchProps) => {
   const [keyword, setKeyword] = useState("");
   const [selectedCountry, setSelectedCountry] = useState("us");
   const [isLoading, setIsLoading] = useState(false);
+  const [results, setResults] = useState<SearchResult[]>([]);
+  const [progressMessage, setProgressMessage] = useState("");
+  const [currentProgress, setCurrentProgress] = useState(0);
+  const [totalProgress, setTotalProgress] = useState(0);
 
   const handleSearch = async () => {
-    if (!keyword.trim()) return;
+    setResults([]);
+    if (!keyword.trim() || !config) return;
 
     setIsLoading(true);
+    setCurrentProgress(0);
+    setTotalProgress(0);
+
     try {
-      // Search Google
-      const results = await searchGoogle(
+      const searchResults = await searchGoogle(
         keyword,
         selectedCountry,
         config.apiKey,
         config.searchEngineId,
+        (msg) => {
+          setProgressMessage(msg);
+          // Extract progress numbers from message if available
+          const match = msg.match(/(\d+)\s*\/\s*(\d+)/);
+          if (match) {
+            setCurrentProgress(parseInt(match[1]));
+            setTotalProgress(parseInt(match[2]));
+          }
+        },
       );
 
-      // Fetch and process content for each result
-      const processedResults = await Promise.all(
-        results.map(async (result) => {
-          const { content: htmlContent, error } = await fetchPageContent(
-            result.url,
-          );
-          const markdownContent = htmlContent
-            ? htmlToMarkdown(htmlContent)
-            : "";
-          return {
-            ...result,
-            htmlContent,
-            markdownContent,
-            error,
-          };
-        }),
-      );
-
-      onNext(processedResults);
+      setResults(searchResults);
     } catch (error) {
       console.error("Search failed:", error);
+      setProgressMessage(
+        `Error: ${error instanceof Error ? error.message : "Search failed"}`,
+      );
     } finally {
       setIsLoading(false);
     }
   };
 
+  const handleDownload = () => {
+    if (results.length === 0) return;
+
+    const content = results
+      .map(
+        (result) =>
+          `# ${result.title}\n\nSource: ${result.url}\n\n${result.snippet}\n\n---\n`,
+      )
+      .join("\n");
+
+    downloadTextFile(`${keyword.replace(/\s+/g, "-")}.txt`, content);
+  };
+
   return (
-    <div className="w-full max-w-3xl mx-auto space-y-6 p-6 bg-white rounded-lg shadow-sm">
-      <div className="space-y-2">
-        <h2 className="text-2xl font-semibold">Search Content</h2>
-        <p className="text-sm text-muted-foreground">
-          Enter a keyword and select region to search for content
-        </p>
+    <div className="w-full max-w-4xl mx-auto space-y-6 p-6 bg-white rounded-lg shadow-sm">
+      <div className="flex items-center justify-between">
+        <div className="space-y-1">
+          <h2 className="text-2xl font-semibold">Step 2: Content Research</h2>
+          <p className="text-sm text-muted-foreground">
+            Search and analyze content from different regions
+          </p>
+        </div>
+        <Button variant="ghost" size="icon" onClick={onBack}>
+          <ArrowLeft className="h-4 w-4" />
+        </Button>
       </div>
 
       <div className="flex items-center gap-4">
@@ -99,9 +128,78 @@ const Step2Search = ({ config, onNext }: Step2SearchProps) => {
         </Button>
       </div>
 
-      {isLoading && (
+      {(isLoading || progressMessage) && (
+        <div className="flex flex-col items-center justify-center py-8 space-y-4">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
+          <div className="text-slate-500 text-center font-medium">
+            {progressMessage || "Initializing search..."}
+          </div>
+          {totalProgress > 0 && (
+            <div className="w-full max-w-md">
+              <div className="w-full bg-slate-200 rounded-full h-2.5">
+                <div
+                  className="bg-blue-500 h-2.5 rounded-full transition-all duration-300"
+                  style={{
+                    width: `${(currentProgress / totalProgress) * 100}%`,
+                  }}
+                ></div>
+              </div>
+              <div className="text-xs text-slate-500 text-center mt-2">
+                {currentProgress} of {totalProgress}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {!isLoading && results.length > 0 && (
+        <div className="space-y-6">
+          <div className="flex justify-between items-center">
+            <h3 className="text-lg font-semibold">Search Results</h3>
+            <div className="flex gap-2">
+              <Button
+                onClick={handleDownload}
+                variant="outline"
+                className="gap-2"
+              >
+                <Download className="h-4 w-4" />
+                Download Results
+              </Button>
+              <Button onClick={() => onNext(results)} className="gap-2">
+                Next Step
+              </Button>
+            </div>
+          </div>
+
+          <div className="space-y-4">
+            {results.map((result, index) => (
+              <div
+                key={index}
+                className="p-4 rounded-lg border border-slate-200 space-y-2"
+              >
+                <h4 className="font-medium text-blue-600">
+                  <a
+                    href={result.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    {result.title}
+                  </a>
+                </h4>
+                <p className="text-sm text-slate-600">{result.snippet}</p>
+                {result.error && (
+                  <p className="text-xs text-red-500">Error: {result.error}</p>
+                )}
+                <div className="text-xs text-slate-400">{result.url}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {!isLoading && !results.length && (
         <div className="flex items-center justify-center py-8 text-slate-500">
-          Searching and processing results...
+          No results yet. Enter a keyword and select a country to search.
         </div>
       )}
     </div>
