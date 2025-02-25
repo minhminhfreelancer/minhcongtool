@@ -52,15 +52,22 @@ export const searchGoogle = async (
       progressCallback?.(`Processing result ${i + 1} / ${items.length}`);
 
       const result: SearchResult = {
-        title: item.title,
-        url: item.link,
+        title: item.title || "Untitled",
+        url: item.link || "",
         snippet: item.snippet || "",
       };
 
       try {
-        // Attempt to fetch page content
-        const content = await fetchPageContent(item.link);
-        result.content = content;
+        // Check if URL is valid before attempting to fetch
+        if (isValidUrl(item.link)) {
+          // Attempt to fetch page content
+          const content = await fetchPageContent(item.link);
+
+          // Store the raw HTML content
+          result.content = content;
+        } else {
+          throw new Error("Invalid URL");
+        }
       } catch (error) {
         console.warn(`Warning fetching ${item.link}: ${error}`);
         result.error =
@@ -80,13 +87,25 @@ export const searchGoogle = async (
 };
 
 /**
+ * Helper function to validate URLs
+ */
+const isValidUrl = (urlString: string): boolean => {
+  try {
+    const url = new URL(urlString);
+    return url.protocol === "http:" || url.protocol === "https:";
+  } catch {
+    return false;
+  }
+};
+
+/**
  * Fetch content from a URL
  * @param url The URL to fetch
  * @returns The page content as text
  */
 export const fetchPageContent = async (url: string): Promise<string> => {
   try {
-    // Option 1: Use a more reliable CORS proxy
+    // Use a reliable CORS proxy
     const corsProxyUrl = "https://api.allorigins.win/raw?url=";
 
     const response = await fetch(`${corsProxyUrl}${encodeURIComponent(url)}`, {
@@ -110,27 +129,44 @@ export const fetchPageContent = async (url: string): Promise<string> => {
 };
 
 /**
- * Convert HTML to Markdown
+ * Convert HTML to Markdown with proper link preservation
  * @param html HTML content
  * @returns Markdown content
  */
+import TurndownService from "turndown";
+
 export const htmlToMarkdown = (html: string): string => {
-  // Simple HTML to Markdown conversion
-  // Replace this with a more comprehensive solution if needed
-  let markdown = html;
+  if (!html) return "";
 
-  // Remove HTML tags (simplified)
-  markdown = markdown.replace(/<[^>]*>/g, "");
+  try {
+    const turndownService = new TurndownService({
+      headingStyle: "atx",
+      hr: "---",
+      bulletListMarker: "-",
+      codeBlockStyle: "fenced",
+      emDelimiter: "_",
+      strongDelimiter: "**",
+      linkStyle: "inlined",
+    });
 
-  // Decode HTML entities
-  markdown = markdown
-    .replace(/&lt;/g, "<")
-    .replace(/&gt;/g, ">")
-    .replace(/&amp;/g, "&")
-    .replace(/&quot;/g, '"')
-    .replace(/&#39;/g, "'");
+    // Remove script and style tags before conversion
+    const cleanHtml = html
+      .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, "")
+      .replace(/<style\b[^<]*(?:(?!<\/style>)<[^<]*)*<\/style>/gi, "")
+      .replace(/<img[^>]*src="data:image[^>]*>/gi, "[Image]");
 
-  return markdown;
+    // Convert HTML to Markdown
+    let markdown = turndownService.turndown(cleanHtml);
+
+    // Clean up multiple consecutive line breaks
+    markdown = markdown.replace(/\n{3,}/g, "\n\n");
+
+    return markdown;
+  } catch (error) {
+    console.error("Error converting HTML to Markdown:", error);
+    // Fallback to basic text extraction if turndown fails
+    return html.replace(/<[^>]*>/g, "").trim();
+  }
 };
 
 /**
@@ -154,7 +190,11 @@ export const downloadTextFile = (filename: string, text: string): void => {
   document.body.removeChild(element);
 };
 
-// Alternative implementation using a different CORS proxy if needed
+// The following are alternative implementations that you can use if the main ones have issues
+
+/**
+ * Alternative implementation using a different CORS proxy if needed
+ */
 export const fetchPageContentAlternative = async (
   url: string,
 ): Promise<string> => {
@@ -182,7 +222,9 @@ export const fetchPageContentAlternative = async (
   }
 };
 
-// Server-side proxy implementation (requires backend support)
+/**
+ * Server-side proxy implementation (requires backend support)
+ */
 export const fetchPageContentViaBackend = async (
   url: string,
 ): Promise<string> => {

@@ -95,13 +95,19 @@ const Step2Search = ({
     if (results.length === 0) return;
 
     const content = results
-      .map(
-        (result) =>
-          `# ${result.title}\n\nSource: ${result.url}\n\n${result.snippet || "No content available"}\n\n---\n`,
-      )
+      .map((result) => {
+        // Convert HTML content to markdown if available
+        const markdownContent = result.content
+          ? htmlToMarkdown(result.content)
+          : result.snippet || "No content available";
+
+        // Create a formatted markdown document
+        return `# ${result.title}\n\nSource: ${result.url}\n\n## Summary\n${result.snippet || "No summary available"}\n\n## Full Content\n${markdownContent}\n\n---\n`;
+      })
       .join("\n");
 
-    downloadTextFile(`${keyword.replace(/\s+/g, "-")}.txt`, content);
+    // Use the search keyword as the filename
+    downloadTextFile(`${keyword.replace(/\\s+/g, "-")}.txt`, content);
   };
 
   return (
