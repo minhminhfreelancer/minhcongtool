@@ -71,7 +71,13 @@ const Step2Search = ({
       const hasContentErrors = searchResults.some((result) => result.error);
       setHasErrors(hasContentErrors);
 
-      setResults(searchResults);
+      // Add keyword to results
+      const resultsWithKeyword = searchResults.map((result) => ({
+        ...result,
+        searchKeyword: keyword,
+      }));
+
+      setResults(resultsWithKeyword);
 
       if (hasContentErrors) {
         setProgressMessage(
@@ -107,7 +113,7 @@ const Step2Search = ({
       .join("\n");
 
     // Use the search keyword as the filename
-    downloadTextFile(`${keyword.replace(/\\s+/g, "-")}.txt`, content);
+    downloadTextFile(`${keyword.replace(/\s+/g, "-")}.txt`, content);
   };
 
   return (

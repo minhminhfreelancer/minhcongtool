@@ -78,14 +78,8 @@ ${cleanSnippet}
         })
         .join("\n");
 
-      // Extract keyword from first result's title and clean it
-      const keyword =
-        results[0]?.title
-          .split(/[\s-]+/)
-          .slice(0, 3)
-          .join(" ")
-          .toLowerCase()
-          .replace(/[^a-z0-9\s]/g, "") || "";
+      // Use the keyword passed from Step2Search
+      const keyword = results[0]?.searchKeyword || "";
 
       // Store content in memory
       const researchPrompt = prompt.replace("[CONTENT]", content);

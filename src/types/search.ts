@@ -5,6 +5,7 @@ export interface SearchResult {
   htmlContent?: string;
   markdownContent?: string;
   error?: string;
+  searchKeyword?: string;
 }
 
 export interface CountryCode {
