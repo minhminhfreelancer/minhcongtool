@@ -15,7 +15,8 @@ export default defineConfig({
     react({
       plugins: [...conditionalPlugins],
     }),
-    tempo(),
+    // Chỉ sử dụng tempo trong môi trường development
+    process.env.NODE_ENV !== "production" ? tempo() : null,
   ],
   resolve: {
     alias: {
@@ -39,5 +40,8 @@ export default defineConfig({
     port: Number(process.env.PORT) || 5173,
     strictPort: true,
     allowedHosts: true,
+    headers: {
+      "Content-Type": "text/javascript",
+    },
   },
 });

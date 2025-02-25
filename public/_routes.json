@@ -1,0 +1,30 @@
+{
+  "version": 1,
+  "include": ["/*"],
+  "exclude": [
+    "/_headers",
+    "/_redirects",
+    "/build/*"
+  ],
+  "routes": [
+    {
+      "src": "^/assets/.*\\.js$",
+      "headers": {
+        "Content-Type": "text/javascript"
+      }
+    },
+    {
+      "src": "^/src/.*\\.tsx?$",
+      "headers": {
+        "Content-Type": "text/javascript"
+      }
+    },
+    {
+      "handle": "filesystem"
+    },
+    {
+      "src": "/.*",
+      "dest": "/index.html"
+    }
+  ]
+}
