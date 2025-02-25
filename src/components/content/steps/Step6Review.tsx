@@ -52,8 +52,15 @@ const Step6Review = ({
   const [showStyleGuide, setShowStyleGuide] = useState(true);
   const [showContentOutline, setShowContentOutline] = useState(true);
 
+  // Initialize with actual data from previous steps
   useEffect(() => {
-    // Initialize with actual data from previous steps
+    console.log("Step6Review received data:", {
+      keyword,
+      contentTypeName,
+      styleAnalysis: styleAnalysis?.substring(0, 50) + "...",
+      contentOutline: contentOutline?.substring(0, 50) + "...",
+    });
+
     setGuideContent(styleAnalysis || "No style analysis available");
     setOutlineContent(contentOutline || "No content outline available");
   }, [styleAnalysis, contentOutline]);
