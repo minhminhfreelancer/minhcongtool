@@ -30,23 +30,38 @@ export interface SearchConfig {
 const ContentWizard = () => {
   // Step management
   const [currentStep, setCurrentStep] = useState(1);
+
+  // Search and content data
   const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
-  const [analysisPrompt, setAnalysisPrompt] = useState("");
   const [keyword, setKeyword] = useState("");
   const [researchContent, setResearchContent] = useState("");
-  const [analysisResult, setAnalysisResult] = useState("");
-  const [researchData, setResearchData] = useState<{
-    keyword: string;
-    research: string;
-    analysis: string;
-  } | null>(null);
-  const [partNumber, setPartNumber] = useState(0);
+
+  // Analysis data
+  const [analysisPrompt, setAnalysisPrompt] = useState("");
   const [styleAnalysis, setStyleAnalysis] = useState("");
+
+  // Content structure data
+  const [contentOutline, setContentOutline] = useState("");
+  const [detectedContentType, setDetectedContentType] = useState({
+    key: "pillar",
+    name: "Pillar Content",
+  });
+  const [partNumber, setPartNumber] = useState(0);
+
+  // Content writing data
+  const [styleGuide, setStyleGuide] = useState("");
+  const [finalOutline, setFinalOutline] = useState("");
+  const [finalContent, setFinalContent] = useState("");
+
+  // SEO and schema data
+  const [metaContent, setMetaContent] = useState("");
+  const [schemaContent, setSchemaContent] = useState("");
 
   // Store configurations
   const [modelConfig, setModelConfig] = useState<ModelConfig | null>(null);
   const [apiKeys, setApiKeys] = useState<StoredApiKey[]>([]);
 
+  // Step 1: Configuration
   const handleStep1Complete = (config: ModelConfig) => {
     try {
       // Validate API key exists
@@ -85,6 +100,7 @@ const ContentWizard = () => {
     }
   };
 
+  // Step 2: Search
   const handleStep2Complete = (results: SearchResult[]) => {
     try {
       setSearchResults(results);
@@ -100,6 +116,7 @@ const ContentWizard = () => {
     }
   };
 
+  // Step 3: Content Review
   const handleStep3Complete = (
     analysis: string,
     kw: string,
@@ -109,16 +126,11 @@ const ContentWizard = () => {
       setAnalysisPrompt(analysis);
       setKeyword(kw);
       setResearchContent(research);
-      setResearchData({
-        keyword: kw,
-        research: research,
-        analysis: analysis,
-      });
       setCurrentStep(4);
     } catch (error) {
-      console.error("Analysis error:", error);
+      console.error("Content review error:", error);
       toast({
-        title: "Analysis Error",
+        title: "Content Analysis Error",
         description:
           error instanceof Error ? error.message : "An unknown error occurred",
         variant: "destructive",
@@ -126,6 +138,7 @@ const ContentWizard = () => {
     }
   };
 
+  // Step 4: Style Analysis
   const handleStep4Complete = (analysis: string) => {
     try {
       setStyleAnalysis(analysis);
@@ -139,6 +152,111 @@ const ContentWizard = () => {
         variant: "destructive",
       });
     }
+  };
+
+  // Step 5: Content Structure
+  const handleStep5Complete = (outline: string, parts: number) => {
+    try {
+      setContentOutline(outline);
+      setPartNumber(parts);
+      setCurrentStep(6);
+    } catch (error) {
+      console.error("Structure error:", error);
+      toast({
+        title: "Content Structure Error",
+        description:
+          error instanceof Error ? error.message : "An unknown error occurred",
+        variant: "destructive",
+      });
+    }
+  };
+
+  // Step 6: Content Review
+  const handleStep6Complete = (style: string, outline: string) => {
+    try {
+      setStyleGuide(style);
+      setFinalOutline(outline);
+      setCurrentStep(7);
+    } catch (error) {
+      console.error("Review error:", error);
+      toast({
+        title: "Content Review Error",
+        description:
+          error instanceof Error ? error.message : "An unknown error occurred",
+        variant: "destructive",
+      });
+    }
+  };
+
+  // Step 7: Content Writing
+  const handleStep7Complete = (content: string) => {
+    try {
+      setFinalContent(content);
+      setCurrentStep(8);
+    } catch (error) {
+      console.error("Writing error:", error);
+      toast({
+        title: "Content Writing Error",
+        description:
+          error instanceof Error ? error.message : "An unknown error occurred",
+        variant: "destructive",
+      });
+    }
+  };
+
+  // Step 8: SEO
+  const handleStep8Complete = (meta: string) => {
+    try {
+      setMetaContent(meta);
+      setCurrentStep(9);
+    } catch (error) {
+      console.error("SEO error:", error);
+      toast({
+        title: "SEO Optimization Error",
+        description:
+          error instanceof Error ? error.message : "An unknown error occurred",
+        variant: "destructive",
+      });
+    }
+  };
+
+  // Step 9: Schema
+  const handleStep9Complete = (schema: string) => {
+    try {
+      setSchemaContent(schema);
+      setCurrentStep(10);
+    } catch (error) {
+      console.error("Schema error:", error);
+      toast({
+        title: "Schema Generation Error",
+        description:
+          error instanceof Error ? error.message : "An unknown error occurred",
+        variant: "destructive",
+      });
+    }
+  };
+
+  // Step 10: Final Output
+  const handleFinish = () => {
+    // Reset all state to start fresh
+    setCurrentStep(1);
+    setSearchResults([]);
+    setKeyword("");
+    setResearchContent("");
+    setAnalysisPrompt("");
+    setStyleAnalysis("");
+    setContentOutline("");
+    setPartNumber(0);
+    setStyleGuide("");
+    setFinalOutline("");
+    setFinalContent("");
+    setMetaContent("");
+    setSchemaContent("");
+
+    toast({
+      title: "Content Generation Complete",
+      description: "Your content has been successfully generated and exported.",
+    });
   };
 
   // Get active API key for search
@@ -163,6 +281,7 @@ const ContentWizard = () => {
           onApiKeysChange={setApiKeys}
         />
       )}
+
       {currentStep === 2 && modelConfig && (
         <Step2Search
           config={getSearchConfig()}
@@ -171,6 +290,7 @@ const ContentWizard = () => {
           onBack={() => setCurrentStep(1)}
         />
       )}
+
       {currentStep === 3 && modelConfig && (
         <Step3Review
           results={searchResults}
@@ -179,6 +299,7 @@ const ContentWizard = () => {
           onBack={() => setCurrentStep(2)}
         />
       )}
+
       {currentStep === 4 && modelConfig && (
         <Step4Analysis
           modelConfig={modelConfig}
@@ -188,54 +309,82 @@ const ContentWizard = () => {
           onBack={() => setCurrentStep(3)}
         />
       )}
+
       {currentStep === 5 && modelConfig && (
         <Step5Structure
           modelConfig={modelConfig}
           keyword={keyword}
           researchContent={researchContent}
           styleAnalysis={styleAnalysis}
-          onNext={(analysis, number) => {
-            setPartNumber(number);
-            setCurrentStep(6);
-          }}
+          contentTypeKey={detectedContentType.key}
+          contentTypeName={detectedContentType.name}
+          onNext={handleStep5Complete}
           onBack={() => setCurrentStep(4)}
         />
       )}
+
       {currentStep === 6 && modelConfig && (
         <Step6Review
           modelConfig={modelConfig}
-          onNext={() => setCurrentStep(7)}
+          keyword={keyword}
+          researchContent={researchContent}
+          styleAnalysis={styleAnalysis}
+          contentOutline={contentOutline}
+          contentTypeName={detectedContentType.name}
+          onNext={handleStep6Complete}
           onBack={() => setCurrentStep(5)}
         />
       )}
+
       {currentStep === 7 && modelConfig && (
         <Step7Writing
           modelConfig={modelConfig}
+          keyword={keyword}
+          contentTypeName={detectedContentType.name}
+          styleGuide={styleGuide}
+          contentOutline={finalOutline}
           partNumber={partNumber}
-          onNext={() => setCurrentStep(8)}
+          onNext={handleStep7Complete}
           onBack={() => setCurrentStep(6)}
         />
       )}
+
       {currentStep === 8 && modelConfig && (
         <Step8SEO
           modelConfig={modelConfig}
-          onNext={() => setCurrentStep(9)}
+          keyword={keyword}
+          contentTypeName={detectedContentType.name}
+          contentOutline={finalOutline}
+          finalContent={finalContent}
+          onNext={handleStep8Complete}
           onBack={() => setCurrentStep(7)}
         />
       )}
+
       {currentStep === 9 && modelConfig && (
         <Step9Schema
           modelConfig={modelConfig}
-          onNext={() => setCurrentStep(10)}
+          keyword={keyword}
+          contentTypeName={detectedContentType.name}
+          finalContent={finalContent}
+          metaContent={metaContent}
+          onNext={handleStep9Complete}
           onBack={() => setCurrentStep(8)}
         />
       )}
+
       {currentStep === 10 && modelConfig && (
         <Step10FinalOutput
           modelConfig={modelConfig}
-          onNext={() => setCurrentStep(1)}
+          keyword={keyword}
+          contentTypeName={detectedContentType.name}
+          finalContent={finalContent}
+          metaContent={metaContent}
+          schemaContent={schemaContent}
+          styleGuide={styleGuide}
+          contentOutline={finalOutline}
           onBack={() => setCurrentStep(9)}
-          onFinish={() => setCurrentStep(1)}
+          onFinish={handleFinish}
         />
       )}
     </div>
