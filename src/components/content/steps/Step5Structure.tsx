@@ -95,127 +95,21 @@ Structure the outline in a hierarchical format using proper heading levels (H2, 
     },
   ];
 
-  // Generate a sample content outline
+  // Generate a content outline
   const generateContentOutline = async () => {
     setIsGenerating(true);
     try {
       // In a real implementation, this would call an AI API
-      // For demonstration, simulate a 2 second delay and return sample outline
+      // For demonstration, simulate a 2 second delay
       await new Promise((resolve) => setTimeout(resolve, 2000));
 
       // Set a random number of H2 sections between 3-7
       const newPartNumber = Math.floor(Math.random() * 5) + 3;
       setPartNumber(newPartNumber);
 
-      // Sample outline result - this would come from the AI in a real implementation
-      const sampleOutline = `# Comprehensive Content Outline for "${keyword}"
-
-## Introduction to ${keyword}
-- **Key Points**: Define ${keyword}, explain importance, establish reader context
-- **Target Word Count**: 250-300 words
-- **Key Questions to Answer**: 
-  - What is ${keyword}?
-  - Why is ${keyword} important?
-  - Who needs to understand ${keyword}?
-- **Visual Element**: Introductory infographic showing key statistics
-- **Internal Linking**: Link to related guides and tutorials
-
-## Core Components of ${keyword}
-- **Key Points**: Break down fundamental elements, explain technical aspects
-- **Target Word Count**: 400-500 words
-- **Subsections**:
-  ### Essential Features
-  - Detailed explanation of critical features
-  - Comparison table of feature importance
-  ### Technical Specifications
-  - Industry standards and specifications
-  - Common variations and alternatives
-- **Key Questions to Answer**:
-  - What are the core elements of ${keyword}?
-  - How do these components work together?
-- **Visual Element**: Component breakdown diagram
-- **Internal Linking**: Deep links to individual component guides
-
-## ${keyword} Selection Guide
-- **Key Points**: Decision criteria, evaluation framework, comparison methodology
-- **Target Word Count**: 600-700 words
-- **Subsections**:
-  ### Evaluation Criteria
-  - Primary factors to consider
-  - Weighted importance of different factors
-  ### Common Scenarios
-  - Appropriate selections for different use cases
-  - Decision matrix for various situations
-- **Key Questions to Answer**:
-  - How to evaluate ${keyword} options?
-  - Which factors matter most for my situation?
-- **Visual Element**: Decision flowchart
-- **Internal Linking**: Links to reviews and comparison articles
-
-## Best Practices for ${keyword} Implementation
-- **Key Points**: Step-by-step process, common pitfalls, expert tips
-- **Target Word Count**: 550-650 words
-- **Subsections**:
-  ### Implementation Process
-  - Preparation steps
-  - Execution guidelines
-  ### Common Mistakes to Avoid
-  - Typical errors
-  - Troubleshooting guidelines
-- **Key Questions to Answer**:
-  - How do I implement ${keyword} properly?
-  - What mistakes should I avoid?
-- **Visual Element**: Process checklist infographic
-- **Internal Linking**: Links to case studies and tutorials
-
-## Advanced ${keyword} Strategies
-- **Key Points**: Advanced techniques, optimization approaches, expert-level insights
-- **Target Word Count**: 500-600 words
-- **Subsections**:
-  ### Optimization Techniques
-  - Performance enhancement methods
-  - Efficiency improvements
-  ### Integration Strategies
-  - Combining with complementary systems
-  - Ecosystem considerations
-- **Key Questions to Answer**:
-  - How can I get the most out of ${keyword}?
-  - What advanced techniques exist?
-- **Visual Element**: Before/after comparison chart
-- **Internal Linking**: Links to advanced guides and expert discussions
-
-## Future Trends in ${keyword}
-- **Key Points**: Emerging developments, industry forecasts, future applications
-- **Target Word Count**: 350-450 words
-- **Key Questions to Answer**:
-  - How is ${keyword} evolving?
-  - What future developments should I anticipate?
-- **Visual Element**: Timeline of predicted advancements
-- **Internal Linking**: Links to news and updates section
-
-## Conclusion and Next Steps
-- **Key Points**: Summary of key takeaways, actionable recommendations, resource links
-- **Target Word Count**: 200-250 words
-- **Key Questions to Answer**:
-  - What are the most important points to remember?
-  - What should I do next?
-- **Visual Element**: Summary checklist or key points callout
-- **Internal Linking**: Links to related content and resources
-
-## FAQ Section
-- Compilation of most common questions with concise answers
-- Target Word Count: 400-500 words
-- Internal Linking: Contextual links to relevant sections within the article
-
----
-
-**Total Estimated Word Count**: 3,250-3,950 words
-**Primary Target Keyword**: ${keyword}
-**Secondary Keywords**: [List relevant secondary keywords]
-**Content Type**: ${contentTypeName}
-**Target Audience**: [Define primary audience segments]`;
-
-      setOutlineResult(sampleOutline);
+      // In a real implementation, this is where you would get the result from the AI API
+      // For now, just set an empty string or placeholder
+      setOutlineResult(""); // This would be populated with actual AI response
       setShowResults(true);
     } catch (error) {
       console.error("Error generating outline:", error);
@@ -433,55 +327,61 @@ Structure the outline in a hierarchical format using proper heading levels (H2, 
 
             <div className="border border-slate-200 rounded-lg overflow-hidden">
               <div className="bg-slate-50 p-4 prose prose-sm max-w-none">
-                {outlineResult.split("\n").map((line, i) => {
-                  if (line.startsWith("# ")) {
-                    return (
-                      <h1 key={i} className="text-xl font-bold mt-2">
-                        {line.substring(2)}
-                      </h1>
-                    );
-                  } else if (line.startsWith("## ")) {
-                    return (
-                      <h2 key={i} className="text-lg font-semibold mt-4">
-                        {line.substring(3)}
-                      </h2>
-                    );
-                  } else if (line.startsWith("### ")) {
-                    return (
-                      <h3 key={i} className="text-md font-medium mt-3">
-                        {line.substring(4)}
-                      </h3>
-                    );
-                  } else if (line.startsWith("- ")) {
-                    return (
-                      <li key={i} className="ml-4">
-                        {line.substring(2)}
-                      </li>
-                    );
-                  } else if (line.startsWith("  - ")) {
-                    return (
-                      <li key={i} className="ml-8">
-                        {line.substring(4)}
-                      </li>
-                    );
-                  } else if (line.startsWith("**")) {
-                    return (
-                      <p key={i} className="my-1 font-semibold">
-                        {line}
-                      </p>
-                    );
-                  } else if (line === "---") {
-                    return <hr key={i} className="my-4" />;
-                  } else if (line === "") {
-                    return <br key={i} />;
-                  } else {
-                    return (
-                      <p key={i} className="my-1">
-                        {line}
-                      </p>
-                    );
-                  }
-                })}
+                {outlineResult ? (
+                  outlineResult.split("\n").map((line, i) => {
+                    if (line.startsWith("# ")) {
+                      return (
+                        <h1 key={i} className="text-xl font-bold mt-2">
+                          {line.substring(2)}
+                        </h1>
+                      );
+                    } else if (line.startsWith("## ")) {
+                      return (
+                        <h2 key={i} className="text-lg font-semibold mt-4">
+                          {line.substring(3)}
+                        </h2>
+                      );
+                    } else if (line.startsWith("### ")) {
+                      return (
+                        <h3 key={i} className="text-md font-medium mt-3">
+                          {line.substring(4)}
+                        </h3>
+                      );
+                    } else if (line.startsWith("- ")) {
+                      return (
+                        <li key={i} className="ml-4">
+                          {line.substring(2)}
+                        </li>
+                      );
+                    } else if (line.startsWith("  - ")) {
+                      return (
+                        <li key={i} className="ml-8">
+                          {line.substring(4)}
+                        </li>
+                      );
+                    } else if (line.startsWith("**")) {
+                      return (
+                        <p key={i} className="my-1 font-semibold">
+                          {line}
+                        </p>
+                      );
+                    } else if (line === "---") {
+                      return <hr key={i} className="my-4" />;
+                    } else if (line === "") {
+                      return <br key={i} />;
+                    } else {
+                      return (
+                        <p key={i} className="my-1">
+                          {line}
+                        </p>
+                      );
+                    }
+                  })
+                ) : (
+                  <p className="text-gray-500 italic">
+                    Waiting for AI response...
+                  </p>
+                )}
               </div>
             </div>
 

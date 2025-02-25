@@ -85,7 +85,9 @@ const Step7Writing = ({
     return lines.slice(sectionIndex + 1, nextSectionIndex).join('\n').trim();
   };
 
-  // Extract a condensed version of the research content
+  // This function is no longer used as we're including the full research content
+  // Keeping it commented for reference in case there's a need to revert back
+  /*
   const getCondensedResearch = (content: string, maxLength: number = 2000): string => {
     if (!content || content.length <= maxLength) return content;
     
@@ -97,6 +99,7 @@ const Step7Writing = ({
     
     return `${firstPart}\n\n[...additional research content omitted for brevity...]\n\n${lastPart}`;
   };
+  */
 
   const buildPrompt = (sectionTitle: string, sectionContent: string): string => {
     return `Based on the following information, write the "${sectionTitle}" section for an article about "${keyword}":
@@ -110,8 +113,8 @@ ${sectionContent || `Write the "${sectionTitle}" section for an article about ${
 CONTENT TYPE:
 ${contentTypeName}
 
-RELEVANT RESEARCH EXCERPT:
-${getCondensedResearch(researchContent, 2000)}
+RELEVANT RESEARCH:
+${researchContent}
 
 FORMAT REQUIREMENTS:
 1. Use HTML formatting: <p>, <h3>, <ul>, <ol>, <li>, <table>, etc.
@@ -165,69 +168,10 @@ Write the complete "${sectionTitle}" section now, including HTML formatting:`;
     setIsGenerating(true);
     try {
       // In a real implementation, this would call an AI API
-      // For now, we'll simulate generation with a delay
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      // No sample content generation - would be replaced with actual API call
       
-      // Generate sample content based on the prompt and section
-      const sectionTitle = sectionTitles[currentSection - 1];
-      const simulatedContent = `<h2>${sectionTitle}</h2>
-<p>This is generated content for the ${sectionTitle} section about ${keyword}. The content follows the ${contentTypeName} format and adheres to the writing style guidelines provided.</p>
-
-<p>When discussing ${keyword}, it's important to consider several key factors that consumers look for. According to our research, durability, comfort, and price are the top three considerations.</p>
-
-<h3>Key Considerations</h3>
-<ul>
-  <li>Feature one with detailed explanation</li>
-  <li>Feature two with practical examples</li>
-  <li>Feature three with comparison to alternatives</li>
-</ul>
-
-<p>As noted by expert sources, the best ${keyword} options typically include models from leading manufacturers like Brand X and Brand Y.</p>
-
-<table>
-  <tr>
-    <th>Feature</th>
-    <th>Importance</th>
-    <th>What to Look For</th>
-  </tr>
-  <tr>
-    <td>Durability</td>
-    <td>High</td>
-    <td>Materials, construction quality</td>
-  </tr>
-  <tr>
-    <td>Comfort</td>
-    <td>High</td>
-    <td>Padding, ergonomic design</td>
-  </tr>
-  <tr>
-    <td>Price</td>
-    <td>Medium</td>
-    <td>Value for money, not just lowest cost</td>
-  </tr>
-</table>
-
-<blockquote>
-  <p>"Finding the perfect ${keyword} isn't just about brand names - it's about finding the right features that match your specific needs."</p>
-</blockquote>
-
-<p>If you're looking for the best value option, the Product Z offers an excellent balance of quality and affordability.</p>
-
-<h3>Practical Applications</h3>
-<p>Understanding how to properly utilize ${keyword} can significantly enhance your experience. Here are some practical applications:</p>
-<ol>
-  <li>Primary use case with detailed instructions</li>
-  <li>Secondary application with expert tips</li>
-  <li>Alternative use scenarios with considerations</li>
-</ol>
-
-<p>The market for ${keyword} has grown substantially in recent years, with innovations focusing on improving user experience and functionality.</p>
-
-<p><img src="placeholder.jpg" alt="Demonstration of ${keyword} with key features highlighted" /></p>
-
-<p>In the next section, we'll explore more specific use cases and scenarios.</p>`;
-      
-      setSectionContent(simulatedContent);
+      // The content would be returned from the API and set here
+      setSectionContent("");
       setShowSectionContent(true);
     } catch (error) {
       console.error("Error generating content:", error);

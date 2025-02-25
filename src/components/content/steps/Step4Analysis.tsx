@@ -71,73 +71,36 @@ const Step4Analysis = ({
   const [prompt, setPrompt] = useState(initializedPrompt);
   const [contentPreviewExpanded, setContentPreviewExpanded] = useState(false);
 
-  // New states for analysis results, processing states, and copy status
+  // States for analysis results, processing states, and copy status
   const [analysisResult, setAnalysisResult] = useState("");
   const [isProcessing, setIsProcessing] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
   const [copySuccess, setCopySuccess] = useState(false);
   const [showResults, setShowResults] = useState(false);
 
-  // Generate a sample writing style analysis
+  // Generate writing style analysis using AI
   const generateStyleAnalysis = async () => {
     setIsGenerating(true);
     try {
-      // In a real implementation, this would call an AI API
-      // For demonstration, we'll simulate a 2 second delay and return sample analysis
+      // This would be an actual API call to an AI service
+      // For example: 
+      // const response = await fetch('/api/generate-analysis', {
+      //   method: 'POST',
+      //   headers: { 'Content-Type': 'application/json' },
+      //   body: JSON.stringify({ 
+      //     model: selectedModel,
+      //     prompt: prompt,
+      //   }),
+      // });
+      // const data = await response.json();
+      // setAnalysisResult(data.result);
+      
+      // Simulating API call with delay for demo purposes
       await new Promise((resolve) => setTimeout(resolve, 2000));
-
-      // Sample style analysis result
-      const sampleResult = `# Writing Style Analysis for "${keyword}"
-
-## Overview
-The analyzed content demonstrates a professional yet accessible writing style, aimed at general readers seeking information about ${keyword}. The content balances educational value with practical guidance.
-
-## Tone and Voice
-* **Tone**: Informational and authoritative, yet conversational
-* **Voice**: Second-person ("you") used frequently to engage readers directly
-* **Formality Level**: Semi-formal; avoids overly academic language while maintaining credibility
-
-## Sentence Structure
-* **Length**: Varied sentence length with a preference for medium-length sentences (15-20 words)
-* **Complexity**: Alternates between simple declarative sentences and more complex structures
-* **Transitions**: Strong use of transitional phrases to guide readers between ideas
-
-## Vocabulary
-* **Level**: Moderate complexity, accessible to general readers with high school education
-* **Technical Terms**: Specialized terminology related to ${keyword} is introduced but immediately defined
-* **Consistency**: Core terms are used consistently throughout the content
-
-## Paragraph Organization
-* **Structure**: Short paragraphs (3-4 sentences) organized around single ideas
-* **Flow**: Clear logical progression using signposting and transitional phrases
-* **Introduction and Conclusion**: Each section has a clear introduction and summary
-
-## Engagement Techniques
-* **Questions**: Rhetorical questions used to introduce new sections
-* **Commands**: Imperative sentences used for advice and recommendations
-* **Examples**: Practical examples and scenarios to illustrate abstract concepts
-
-## Formatting Patterns
-* **Headers**: H2 and H3 headers used to create clear content hierarchy
-* **Lists**: Bulleted lists for features, numbered lists for sequential steps
-* **Emphasis**: Bold text for key points, italics for term definitions
-
-## Readability
-* **Target Audience**: General audience with specific interest in ${keyword}
-* **Reading Level**: Approximately 8th-10th grade reading level
-* **Accessibility**: Well-structured for both detailed reading and scanning
-
-## Writing Guidance
-To match this style when writing about ${keyword}:
-1. Use a confident but friendly tone
-2. Address the reader directly using "you"
-3. Introduce technical terms carefully with clear definitions
-4. Vary sentence structures to maintain interest
-5. Keep paragraphs focused on single ideas
-6. Use formatting to enhance readability
-7. Include practical examples to illustrate concepts`;
-
-      setAnalysisResult(sampleResult);
+      
+      // In a real implementation, we would use the AI's response
+      // instead of setting a placeholder "waiting for API response"
+      setAnalysisResult("The AI analysis will appear here after generation is complete.");
       setShowResults(true);
     } catch (error) {
       console.error("Error generating analysis:", error);
@@ -191,6 +154,49 @@ To match this style when writing about ${keyword}:
     }
   };
 
+  // Helper function to render markdown-like content with basic formatting
+  const renderFormattedContent = (content) => {
+    if (!content) return null;
+    
+    return content.split("\n").map((line, i) => {
+      if (line.startsWith("# ")) {
+        return (
+          <h1 key={i} className="text-xl font-bold mt-2">
+            {line.substring(2)}
+          </h1>
+        );
+      } else if (line.startsWith("## ")) {
+        return (
+          <h2 key={i} className="text-lg font-semibold mt-4">
+            {line.substring(3)}
+          </h2>
+        );
+      } else if (line.startsWith("* ")) {
+        return (
+          <li key={i} className="ml-4">
+            {line.substring(2)}
+          </li>
+        );
+      } else if (
+        /^\d+\.\s/.test(line)
+      ) {
+        return (
+          <li key={i} className="ml-5">
+            {line.substring(line.indexOf(' ') + 1)}
+          </li>
+        );
+      } else if (line === "") {
+        return <br key={i} />;
+      } else {
+        return (
+          <p key={i} className="my-1">
+            {line}
+          </p>
+        );
+      }
+    });
+  };
+
   return (
     <div className="w-full max-w-4xl mx-auto space-y-6 p-6 bg-white rounded-lg shadow-sm">
       <div className="flex items-center justify-between">
@@ -228,7 +234,7 @@ To match this style when writing about ${keyword}:
         </div>
 
         <div className="space-y-2">
-          <label className="text-sm font-medium">Select Model</label>
+          <label className="text-sm font-medium">Select AI Model</label>
           <Select value={selectedModel} onValueChange={setSelectedModel}>
             <SelectTrigger>
               <SelectValue placeholder="Select model" />
@@ -332,49 +338,7 @@ To match this style when writing about ${keyword}:
 
             <div className="border border-slate-200 rounded-lg overflow-hidden">
               <div className="bg-slate-50 p-4 prose prose-sm max-w-none">
-                {analysisResult.split("\n").map((line, i) => {
-                  if (line.startsWith("# ")) {
-                    return (
-                      <h1 key={i} className="text-xl font-bold mt-2">
-                        {line.substring(2)}
-                      </h1>
-                    );
-                  } else if (line.startsWith("## ")) {
-                    return (
-                      <h2 key={i} className="text-lg font-semibold mt-4">
-                        {line.substring(3)}
-                      </h2>
-                    );
-                  } else if (line.startsWith("* ")) {
-                    return (
-                      <li key={i} className="ml-4">
-                        {line.substring(2)}
-                      </li>
-                    );
-                  } else if (
-                    line.startsWith("1. ") ||
-                    line.startsWith("2. ") ||
-                    line.startsWith("3. ") ||
-                    line.startsWith("4. ") ||
-                    line.startsWith("5. ") ||
-                    line.startsWith("6. ") ||
-                    line.startsWith("7. ")
-                  ) {
-                    return (
-                      <li key={i} className="ml-5">
-                        {line.substring(3)}
-                      </li>
-                    );
-                  } else if (line === "") {
-                    return <br key={i} />;
-                  } else {
-                    return (
-                      <p key={i} className="my-1">
-                        {line}
-                      </p>
-                    );
-                  }
-                })}
+                {renderFormattedContent(analysisResult)}
               </div>
             </div>
           </div>
