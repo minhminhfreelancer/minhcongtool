@@ -39,9 +39,11 @@ const Step2Search = ({
   const [progressMessage, setProgressMessage] = useState("");
   const [currentProgress, setCurrentProgress] = useState(0);
   const [totalProgress, setTotalProgress] = useState(0);
+  const [hasErrors, setHasErrors] = useState(false);
 
   const handleSearch = async () => {
     setResults([]);
+    setHasErrors(false);
     if (!keyword.trim() || !config) return;
 
     setIsLoading(true);
@@ -65,12 +67,25 @@ const Step2Search = ({
         },
       );
 
+      // Check if any results have errors
+      const hasContentErrors = searchResults.some((result) => result.error);
+      setHasErrors(hasContentErrors);
+
       setResults(searchResults);
+
+      if (hasContentErrors) {
+        setProgressMessage(
+          "Some content couldn't be fetched due to access restrictions. Results may be incomplete.",
+        );
+      } else {
+        setProgressMessage("Search complete!");
+      }
     } catch (error) {
       console.error("Search failed:", error);
       setProgressMessage(
         `Error: ${error instanceof Error ? error.message : "Search failed"}`,
       );
+      setHasErrors(true);
     } finally {
       setIsLoading(false);
     }
@@ -82,7 +97,7 @@ const Step2Search = ({
     const content = results
       .map(
         (result) =>
-          `# ${result.title}\n\nSource: ${result.url}\n\n${result.snippet}\n\n---\n`,
+          `# ${result.title}\n\nSource: ${result.url}\n\n${result.snippet || "No content available"}\n\n---\n`,
       )
       .join("\n");
 
@@ -130,8 +145,12 @@ const Step2Search = ({
 
       {(isLoading || progressMessage) && (
         <div className="flex flex-col items-center justify-center py-8 space-y-4">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
-          <div className="text-slate-500 text-center font-medium">
+          {isLoading && (
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
+          )}
+          <div
+            className={`text-center font-medium ${hasErrors ? "text-amber-600" : "text-slate-500"}`}
+          >
             {progressMessage || "Initializing search..."}
           </div>
           {totalProgress > 0 && (
@@ -197,7 +216,7 @@ const Step2Search = ({
         </div>
       )}
 
-      {!isLoading && !results.length && (
+      {!isLoading && !results.length && !progressMessage && (
         <div className="flex items-center justify-center py-8 text-slate-500">
           No results yet. Enter a keyword and select a country to search.
         </div>

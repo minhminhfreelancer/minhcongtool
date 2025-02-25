@@ -1,92 +1,100 @@
-import { SearchResult } from "@/types/search";
-import { extractContent } from "./contentExtractor";
+import axios from "axios";
 
-export async function searchGoogle(
-  query: string,
-  countryCode: string,
-  apiKey: string,
-  cx: string,
-  onProgress?: (message: string) => void,
-): Promise<SearchResult[]> {
-  onProgress?.("Starting search process...");
-  onProgress?.(`Searching for "${query}"...`);
-  const url = new URL("https://www.googleapis.com/customsearch/v1");
-  url.searchParams.append("key", apiKey);
-  url.searchParams.append("cx", cx);
-  url.searchParams.append("q", query);
-  url.searchParams.append("gl", countryCode);
-  url.searchParams.append("num", "10");
-  // Add cache buster
-  url.searchParams.append("_", Date.now().toString());
-
-  try {
-    const response = await fetch(url.toString());
-    const data = await response.json();
-
-    if (!response.ok) {
-      throw new Error(data.error?.message || "Search failed");
-    }
-
-    const results = data.items || [];
-    const processedResults = [];
-
-    for (let i = 0; i < results.length; i++) {
-      const item = results[i];
-      onProgress?.(`Processing ${i + 1} of ${results.length}: ${item.link}`);
-
-      try {
-        const { content, error } = await fetchPageContent(item.link, (msg) =>
-          onProgress?.(`[${i + 1}/${results.length}] ${msg}`),
-        );
-
-        if (error) {
-          console.warn(`Warning fetching ${item.link}:`, error);
-        }
-
-        processedResults.push({
-          url: item.link,
-          title: item.title,
-          snippet: content || item.snippet,
-          error: error,
-        });
-      } catch (error) {
-        console.error(`Error fetching ${item.link}:`, error);
-        processedResults.push({
-          url: item.link,
-          title: item.title,
-          snippet: item.snippet,
-          error:
-            error instanceof Error ? error.message : "Failed to fetch content",
-        });
-      }
-    }
-
-    onProgress?.("Search complete! Processing results...");
-    return processedResults;
-  } catch (error) {
-    console.error("Google search failed:", error);
-    throw error;
-  }
+// Define the search result type
+export interface SearchResult {
+  title: string;
+  url: string;
+  snippet: string;
+  content?: string;
+  error?: string;
 }
 
-export async function fetchPageContent(
-  url: string,
-  onProgress?: (message: string) => void,
-): Promise<{ content: string; error?: string }> {
-  onProgress?.(`Starting content fetch from ${url}`);
-
+/**
+ * Search Google for the given query
+ * @param query The search query
+ * @param countryCode The country code to search in
+ * @param apiKey Google API key
+ * @param searchEngineId Google Custom Search Engine ID
+ * @param progressCallback Callback for progress updates
+ * @returns Array of search results
+ */
+export const searchGoogle = async (
+  query: string,
+  countryCode: string = "us",
+  apiKey: string,
+  searchEngineId: string,
+  progressCallback?: (message: string) => void,
+): Promise<SearchResult[]> => {
   try {
-    const serverUrl =
-      import.meta.env.VITE_SERVER_URL || "http://localhost:3001";
-    const response = await fetch(
-      `${serverUrl}/fetch-content?url=${encodeURIComponent(url)}`,
+    progressCallback?.("Fetching search results...");
+
+    const response = await axios.get(
+      "https://www.googleapis.com/customsearch/v1",
       {
-        headers: {
-          "Cache-Control": "no-cache",
-          Pragma: "no-cache",
+        params: {
+          key: apiKey,
+          cx: searchEngineId,
+          q: query,
+          cr: `country${countryCode.toUpperCase()}`,
+          num: 10,
         },
       },
     );
+
+    const items = response.data.items || [];
+    progressCallback?.(`Found ${items.length} results`);
+
+    // Process each result to fetch content
+    const results: SearchResult[] = [];
+
+    for (let i = 0; i < items.length; i++) {
+      const item = items[i];
+      progressCallback?.(`Processing result ${i + 1} / ${items.length}`);
+
+      const result: SearchResult = {
+        title: item.title,
+        url: item.link,
+        snippet: item.snippet || "",
+      };
+
+      try {
+        // Attempt to fetch page content
+        const content = await fetchPageContent(item.link);
+        result.content = content;
+      } catch (error) {
+        console.warn(`Warning fetching ${item.link}: ${error}`);
+        result.error =
+          error instanceof Error ? error.message : "Failed to fetch";
+      }
+
+      results.push(result);
+    }
+
+    return results;
+  } catch (error) {
+    console.error("Error searching Google:", error);
+    throw new Error(
+      `Search failed: ${error instanceof Error ? error.message : "Unknown error"}`,
+    );
+  }
+};
+
+/**
+ * Fetch content from a URL
+ * @param url The URL to fetch
+ * @returns The page content as text
+ */
+export const fetchPageContent = async (url: string): Promise<string> => {
+  try {
+    // Option 1: Use a more reliable CORS proxy
+    const corsProxyUrl = "https://api.allorigins.win/raw?url=";
+
+    const response = await fetch(`${corsProxyUrl}${encodeURIComponent(url)}`, {
+      method: "GET",
+      headers: {
+        "Content-Type": "text/plain",
+      },
+    });
 
     if (!response.ok) {
       throw new Error(
@@ -94,35 +102,103 @@ export async function fetchPageContent(
       );
     }
 
-    const data = await response.json();
-    onProgress?.("Content extracted successfully");
-    return { content: data.content };
+    return await response.text();
   } catch (error) {
-    console.error("Error fetching content:", error);
-    return {
-      content: "",
-      error: error instanceof Error ? error.message : "Unknown error",
-    };
+    console.error(`Error fetching content:`, error);
+    throw error;
   }
-}
+};
 
-export function htmlToMarkdown(html: string): string {
+/**
+ * Convert HTML to Markdown
+ * @param html HTML content
+ * @returns Markdown content
+ */
+export const htmlToMarkdown = (html: string): string => {
+  // Simple HTML to Markdown conversion
+  // Replace this with a more comprehensive solution if needed
+  let markdown = html;
+
+  // Remove HTML tags (simplified)
+  markdown = markdown.replace(/<[^>]*>/g, "");
+
+  // Decode HTML entities
+  markdown = markdown
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&amp;/g, "&")
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'");
+
+  return markdown;
+};
+
+/**
+ * Download text content as a file
+ * @param filename The filename
+ * @param text The text content
+ */
+export const downloadTextFile = (filename: string, text: string): void => {
+  const element = document.createElement("a");
+  element.setAttribute(
+    "href",
+    "data:text/plain;charset=utf-8," + encodeURIComponent(text),
+  );
+  element.setAttribute("download", filename);
+
+  element.style.display = "none";
+  document.body.appendChild(element);
+
+  element.click();
+
+  document.body.removeChild(element);
+};
+
+// Alternative implementation using a different CORS proxy if needed
+export const fetchPageContentAlternative = async (
+  url: string,
+): Promise<string> => {
   try {
-    return extractContent(html);
-  } catch (error) {
-    console.error("Error converting HTML to Markdown:", error);
-    return "";
-  }
-}
+    // Alternative 1: use cors-anywhere (may require requesting temporary access)
+    const corsProxy = "https://cors-anywhere.herokuapp.com/";
 
-export function downloadTextFile(filename: string, content: string) {
-  const blob = new Blob([content], { type: "text/plain" });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = filename;
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  URL.revokeObjectURL(url);
-}
+    const response = await fetch(`${corsProxy}${url}`, {
+      method: "GET",
+      headers: {
+        "X-Requested-With": "XMLHttpRequest",
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error(
+        `Failed to fetch: ${response.status} ${response.statusText}`,
+      );
+    }
+
+    return await response.text();
+  } catch (error) {
+    console.error(`Error fetching content:`, error);
+    throw error;
+  }
+};
+
+// Server-side proxy implementation (requires backend support)
+export const fetchPageContentViaBackend = async (
+  url: string,
+): Promise<string> => {
+  try {
+    // This assumes you have a backend endpoint at /api/proxy
+    const response = await fetch(`/api/proxy?url=${encodeURIComponent(url)}`);
+
+    if (!response.ok) {
+      throw new Error(
+        `Failed to fetch: ${response.status} ${response.statusText}`,
+      );
+    }
+
+    return await response.text();
+  } catch (error) {
+    console.error(`Error fetching content:`, error);
+    throw error;
+  }
+};
