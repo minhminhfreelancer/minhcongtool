@@ -5,7 +5,7 @@ main = "worker/index.ts"
 [[d1_databases]]
 binding = "DB"
 database_name = "content-assistant"
-database_id = "YOUR_DATABASE_ID"
+database_id = "b365b64d-3595-4f95-adb7-470f570dc95c"
 
 [build]
 command = "npm run build"
