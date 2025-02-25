@@ -45,6 +45,10 @@ Please analyze and provide:
   const [prompt, setPrompt] = useState("");
   const [contentType, setContentType] = useState("pillar");
   const [isProcessing, setIsProcessing] = useState(false);
+  const [processedContent, setProcessedContent] = useState("");
+  const [showResults, setShowResults] = useState(false);
+  const [finalKeyword, setFinalKeyword] = useState("");
+  const [finalPrompt, setFinalPrompt] = useState("");
 
   // Set the initial prompt with the keyword filled in
   useEffect(() => {
@@ -76,15 +80,25 @@ Please analyze and provide:
         .join("\n");
 
       // Create the final analysis prompt with the content
-      const finalPrompt = prompt.replace("[CONTENT]", content);
+      const generatedPrompt = prompt.replace("[CONTENT]", content);
 
-      // Move to next step with analysis, keyword and research content
-      onNext(finalPrompt, keyword, content);
+      // Store the processed content and final keyword
+      setProcessedContent(content);
+      setFinalKeyword(keyword);
+      setFinalPrompt(generatedPrompt);
+
+      // Show the results section
+      setShowResults(true);
     } catch (error) {
       console.error("Error processing content:", error);
     } finally {
       setIsProcessing(false);
     }
+  };
+
+  const handleContinue = () => {
+    // Now proceed to the next step with our processed data
+    onNext(finalPrompt, finalKeyword, processedContent);
   };
 
   return (
@@ -151,10 +165,15 @@ Please analyze and provide:
             onChange={(e) => setPrompt(e.target.value)}
             className="min-h-[200px] font-mono text-sm"
           />
-          <p className="text-xs text-slate-500">
-            The command automatically includes your search keyword. Use
-            [CONTENT] as placeholder for the research content.
-          </p>
+          <div className="space-y-1">
+            <p className="text-xs text-slate-500">
+              The command automatically includes your search keyword.
+            </p>
+            <p className="text-xs font-medium text-blue-600">
+              Note: The [CONTENT] placeholder will be automatically replaced
+              with all the research data when you click "Next Step".
+            </p>
+          </div>
         </div>
 
         <Button
@@ -162,8 +181,73 @@ Please analyze and provide:
           className="w-full"
           disabled={isProcessing || !results.length}
         >
-          {isProcessing ? "Processing..." : "Next Step"}
+          {isProcessing ? "Processing..." : "Process [CONTENT] and Preview"}
         </Button>
+
+        {!showResults && (
+          <div className="p-3 bg-blue-50 border border-blue-200 rounded-md">
+            <h4 className="text-sm font-medium text-blue-700 mb-1">
+              How this works:
+            </h4>
+            <p className="text-xs text-blue-600">
+              1. The text area above shows the command template with your
+              keyword already inserted.
+            </p>
+            <p className="text-xs text-blue-600">
+              2. When you click the button above, the [CONTENT] placeholder will
+              be replaced with all your research data.
+            </p>
+            <p className="text-xs text-blue-600">
+              3. You'll see a preview of the processed content before continuing
+              to the next step.
+            </p>
+          </div>
+        )}
+
+        {showResults && (
+          <div className="space-y-4 mt-6">
+            <div className="p-4 bg-green-50 border border-green-200 rounded-md">
+              <h3 className="text-lg font-medium text-green-800 mb-2">
+                Content Processed Successfully
+              </h3>
+              <p className="text-sm text-green-700">
+                The [CONTENT] placeholder has been replaced with your research
+                data ({results.length} results).
+              </p>
+            </div>
+
+            <div className="p-4 border border-slate-200 rounded-md">
+              <h4 className="text-sm font-medium mb-2">
+                Preview of Processed Command:
+              </h4>
+              <div className="max-h-60 overflow-y-auto bg-slate-50 p-3 rounded-md text-xs font-mono">
+                <p>
+                  Keyword: <strong>{finalKeyword}</strong>
+                </p>
+                <p>
+                  Command length:{" "}
+                  <strong>{finalPrompt.length} characters</strong>
+                </p>
+                <p>
+                  Research items: <strong>{results.length}</strong>
+                </p>
+                <p className="mt-2">
+                  First 200 characters of processed command:
+                </p>
+                <p className="mt-1 text-slate-700">
+                  {finalPrompt.substring(0, 200)}...
+                </p>
+              </div>
+            </div>
+
+            <Button
+              onClick={handleContinue}
+              className="w-full bg-green-600 hover:bg-green-700"
+            >
+              Continue to Next Step
+            </Button>
+          </div>
+        )}
       </div>
     </div>
   );
