@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
 import { SearchResult } from "@/types/search";
@@ -20,7 +20,17 @@ export interface Step3ReviewProps {
   onNext: (analysis: string, keyword: string, research: string) => void;
 }
 
-const DEFAULT_PROMPT = `This is research content about articles on [keyword]: [CONTENT]
+const Step3Review = ({
+  results,
+  modelConfig,
+  onBack,
+  onNext,
+}: Step3ReviewProps) => {
+  // Extract keyword from results
+  const keyword = results[0]?.searchKeyword || "";
+
+  // Initialize prompt with the keyword already filled in
+  const DEFAULT_PROMPT = `This is research content about articles on [keyword]: [CONTENT]
 
 Please analyze and provide:
 1. Common article structures
@@ -31,15 +41,18 @@ Please analyze and provide:
 6. Opportunities for differentiation
 7. Content type (choose 1): Pillar Content/Supporting Content/Informational Content/Commercial Content/Engagement Content/News/Updates`;
 
-const Step3Review = ({
-  results,
-  modelConfig,
-  onBack,
-  onNext,
-}: Step3ReviewProps) => {
-  const [prompt, setPrompt] = useState(DEFAULT_PROMPT);
+  const [prompt, setPrompt] = useState("");
   const [contentType, setContentType] = useState("pillar");
   const [isProcessing, setIsProcessing] = useState(false);
+
+  // Set the initial prompt with the keyword filled in
+  useEffect(() => {
+    if (keyword) {
+      setPrompt(DEFAULT_PROMPT.replace("[keyword]", keyword));
+    } else {
+      setPrompt(DEFAULT_PROMPT);
+    }
+  }, [keyword]);
 
   const handleProcess = async () => {
     if (!results.length) return;
@@ -78,14 +91,11 @@ ${cleanSnippet}
         })
         .join("\n");
 
-      // Use the keyword passed from Step2Search
-      const keyword = results[0]?.searchKeyword || "";
-
-      // Store content in memory
-      const researchPrompt = prompt.replace("[CONTENT]", content);
+      // Create the final analysis prompt with the content
+      const finalPrompt = prompt.replace("[CONTENT]", content);
 
       // Move to next step with analysis, keyword and research content
-      onNext(researchPrompt, keyword, content);
+      onNext(finalPrompt, keyword, content);
     } catch (error) {
       console.error("Error processing content:", error);
     } finally {
@@ -158,8 +168,8 @@ ${cleanSnippet}
             className="min-h-[200px] font-mono text-sm"
           />
           <p className="text-xs text-slate-500">
-            Customize the analysis command. Use [CONTENT] as placeholder for the
-            research content.
+            The command automatically includes your search keyword. Use
+            [CONTENT] as placeholder for the research content.
           </p>
         </div>
 
