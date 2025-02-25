@@ -5,6 +5,7 @@ import { SearchResult } from "@/types/search";
 import { CONTENT_TEMPLATES } from "@/lib/templates";
 import { ModelConfig } from "../ContentWizard";
 import { Textarea } from "@/components/ui/textarea";
+import { htmlToMarkdown } from "@/lib/search";
 import {
   Select,
   SelectContent,
@@ -59,35 +60,18 @@ Please analyze and provide:
 
     setIsProcessing(true);
     try {
-      // Enhance search results with more context
+      // Format the content exactly like the downloadTextFile function in Step2Search
       const content = results
         .map((result) => {
-          // Extract key points from title
-          const titlePoints = result.title
-            .split(/[-–—:]/) // Split on common title separators
-            .map((p) => p.trim())
-            .filter((p) => p.length > 10); // Only keep meaningful segments
+          // Convert HTML content to markdown if available
+          const markdownContent = result.content
+            ? typeof htmlToMarkdown === "function"
+              ? htmlToMarkdown(result.content)
+              : result.content
+            : result.snippet || "No content available";
 
-          // Clean and structure the snippet
-          const cleanSnippet = result.snippet
-            .replace(/\.\.\./g, ".") // Remove ellipsis
-            .split(/[.!?]/) // Split into sentences
-            .map((s) => s.trim())
-            .filter((s) => s.length > 0)
-            .join(". ");
-
-          return `# ${result.title}
-
-Source: ${result.url}
-
-Key Points:
-${titlePoints.map((p) => `- ${p}`).join("\n")}
-
-Summary:
-${cleanSnippet}
-
----
-`;
+          // Create a formatted markdown document - using the same format as downloadTextFile
+          return `# ${result.title}\n\nSource: ${result.url}\n\n## Summary\n${result.snippet || "No summary available"}\n\n## Full Content\n${markdownContent}\n\n---\n`;
         })
         .join("\n");
 
