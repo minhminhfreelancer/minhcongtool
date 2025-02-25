@@ -1,10 +1,10 @@
 /**
  * Processes search results and generates formatted research content
- * 
+ *
  * This function transforms search results into properly formatted markdown content
  * in the same format as the downloadable text file from Step2. It handles HTML-to-markdown
  * conversion and structures each search result with consistent headings and sections.
- * 
+ *
  * @param {SearchResult[]} searchResults - Array of search results from previous step
  * @returns {string} - Formatted markdown content ready for analysis
  */
@@ -13,20 +13,22 @@ const generateResearchContent = (searchResults) => {
     .map((result) => {
       // Convert HTML content to markdown if available
       const markdownContent = result.content
-        ? (typeof htmlToMarkdown === 'function' ? htmlToMarkdown(result.content) : result.content)
+        ? typeof htmlToMarkdown === "function"
+          ? htmlToMarkdown(result.content)
+          : result.content
         : result.snippet || "No content available";
 
       // Create a formatted markdown document - using the same format as downloadTextFile
       return `# ${result.title}\n\nSource: ${result.url}\n\n## Summary\n${result.snippet || "No summary available"}\n\n## Full Content\n${markdownContent}\n\n---\n`;
     })
     .join("\n");
-};/**
+}; /**
  * Simulates an analysis of the research content
- * 
+ *
  * In a production environment, this would call an AI API or backend service to generate
  * actual analysis of the research content. For demonstration purposes, we generate
  * a simulated analysis result based on the content structure.
- * 
+ *
  * @param {string} keyword - The search keyword
  * @param {string} content - The research content to analyze
  * @param {SearchResult[]} results - Original search results for additional context
@@ -35,27 +37,28 @@ const generateResearchContent = (searchResults) => {
 const generateContentAnalysis = async (keyword, content, results) => {
   // This would normally be an API call to a backend service or AI model
   // For demo purposes, we'll create a simulated analysis
-  
+
   // Calculate some statistics from the content
   const titleCount = (content.match(/^# /gm) || []).length;
   const wordCount = content.split(/\s+/).length;
   const sourceCount = (content.match(/^Source: /gm) || []).length;
-  
+
   // Extract some sample topics by looking at titles
-  const titles = results.map(r => r.title).slice(0, 3);
-  
+  const titles = results.map((r) => r.title).slice(0, 3);
+
   // Calculate simulated reading time (1 word takes about 0.3 seconds to read)
-  const readingTimeMinutes = Math.round(wordCount * 0.3 / 60);
-  
+  const readingTimeMinutes = Math.round((wordCount * 0.3) / 60);
+
   // Determine the best content type based on the keyword and content
   // This would normally be done by an AI model in a real implementation
   const contentTypeOptions = Object.entries(CONTENT_TEMPLATES);
   const contentTypeIndex = Math.min(
     Math.floor(Math.random() * contentTypeOptions.length),
-    contentTypeOptions.length - 1
+    contentTypeOptions.length - 1,
   );
-  const [contentTypeKey, contentTypeData] = contentTypeOptions[contentTypeIndex];
-  
+  const [contentTypeKey, contentTypeData] =
+    contentTypeOptions[contentTypeIndex];
+
   // Create a formatted analysis document
   return {
     analysisText: `# Content Analysis for "${keyword}"
@@ -94,16 +97,19 @@ To differentiate your content on "${keyword}" consider:
 
 ## Optimization Recommendations
 Based on the ${contentTypeData.name} template:
-${contentTypeData.template.optimization.slice(0, 3).map(tip => `* ${tip}`).join('\n')}
+${contentTypeData.template.optimization
+  .slice(0, 3)
+  .map((tip) => `* ${tip}`)
+  .join("\n")}
 
 ---
 Analysis completed on ${new Date().toLocaleString()}
 `,
     contentTypeKey,
-    contentTypeName: contentTypeData.name
+    contentTypeName: contentTypeData.name,
   };
 };
-};import { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, Download, ClipboardCopy } from "lucide-react";
 import { SearchResult } from "@/types/search";
@@ -134,7 +140,7 @@ const Step3Review = ({
 }: Step3ReviewProps) => {
   // Extract keyword from results
   const keyword = results[0]?.searchKeyword || "";
-  
+
   // Initialize prompt with the keyword already filled in
   const DEFAULT_PROMPT = `This is research content about articles on [keyword]: [CONTENT]
 
@@ -153,10 +159,13 @@ Please analyze and provide:
   const [showResults, setShowResults] = useState(false);
   const [finalKeyword, setFinalKeyword] = useState("");
   const [finalPrompt, setFinalPrompt] = useState("");
-  
+
   // Added state for analysis results
   const [analysisResults, setAnalysisResults] = useState("");
-  const [detectedContentType, setDetectedContentType] = useState({ key: "", name: "" });
+  const [detectedContentType, setDetectedContentType] = useState({
+    key: "",
+    name: "",
+  });
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [copySuccess, setCopySuccess] = useState(false);
 
@@ -179,22 +188,26 @@ Please analyze and provide:
 
       // Create the final analysis prompt with the content
       const generatedPrompt = prompt.replace("[CONTENT]", content);
-      
+
       // Store the processed content and final keyword
       setProcessedContent(content);
       setFinalKeyword(keyword);
       setFinalPrompt(generatedPrompt);
-      
+
       // Show the results section
       setShowResults(true);
-      
+
       // Generate analysis results
       setIsAnalyzing(true);
-      const analysisResult = await generateContentAnalysis(keyword, content, results);
+      const analysisResult = await generateContentAnalysis(
+        keyword,
+        content,
+        results,
+      );
       setAnalysisResults(analysisResult.analysisText);
       setDetectedContentType({
         key: analysisResult.contentTypeKey,
-        name: analysisResult.contentTypeName
+        name: analysisResult.contentTypeName,
       });
       setIsAnalyzing(false);
     } catch (error) {
@@ -203,29 +216,33 @@ Please analyze and provide:
       setIsProcessing(false);
     }
   };
-  
+
   const handleContinue = () => {
     // Now proceed to the next step with our processed data
     onNext(finalPrompt, finalKeyword, processedContent);
   };
-  
+
   const handleCopyAnalysis = () => {
     if (!analysisResults) return;
-    
-    navigator.clipboard.writeText(analysisResults)
+
+    navigator.clipboard
+      .writeText(analysisResults)
       .then(() => {
         setCopySuccess(true);
         setTimeout(() => setCopySuccess(false), 2000);
       })
-      .catch(err => {
-        console.error('Failed to copy: ', err);
+      .catch((err) => {
+        console.error("Failed to copy: ", err);
       });
   };
-  
+
   const handleDownloadAnalysis = () => {
     if (!analysisResults) return;
-    
-    downloadTextFile(`${finalKeyword.replace(/\s+/g, "-")}-analysis.md`, analysisResults);
+
+    downloadTextFile(
+      `${finalKeyword.replace(/\s+/g, "-")}-analysis.md`,
+      analysisResults,
+    );
   };
 
   return (
@@ -255,7 +272,8 @@ Please analyze and provide:
               The command automatically includes your search keyword.
             </p>
             <p className="text-xs font-medium text-blue-600">
-              Note: The [CONTENT] placeholder will be automatically replaced with all the research data when you click the button below.
+              Note: The [CONTENT] placeholder will be automatically replaced
+              with all the research data when you click the button below.
             </p>
           </div>
         </div>
@@ -265,80 +283,99 @@ Please analyze and provide:
           className="w-full"
           disabled={isProcessing || isAnalyzing || !results.length}
         >
-          {isProcessing ? "Processing Content..." : isAnalyzing ? "Analyzing Content..." : "Generate Content Analysis"}
+          {isProcessing
+            ? "Processing Content..."
+            : isAnalyzing
+              ? "Analyzing Content..."
+              : "Generate Content Analysis"}
         </Button>
-        
+
         {!showResults && (
           <div className="p-3 bg-blue-50 border border-blue-200 rounded-md">
-            <h4 className="text-sm font-medium text-blue-700 mb-1">How this works:</h4>
+            <h4 className="text-sm font-medium text-blue-700 mb-1">
+              How this works:
+            </h4>
             <p className="text-xs text-blue-600">
-              1. The text area above shows the command template with your keyword already inserted.
+              1. The text area above shows the command template with your
+              keyword already inserted.
             </p>
             <p className="text-xs text-blue-600">
-              2. When you click the button above, your research data will be processed and analyzed.
+              2. When you click the button above, your research data will be
+              processed and analyzed.
             </p>
             <p className="text-xs text-blue-600">
-              3. The analysis will determine the best content type for your topic and show detailed results.
+              3. The analysis will determine the best content type for your
+              topic and show detailed results.
             </p>
           </div>
         )}
-        
+
         {showResults && (
           <div className="space-y-4 mt-6">
             <div className="p-4 bg-green-50 border border-green-200 rounded-md">
-              <h3 className="text-lg font-medium text-green-800 mb-2">Content Analysis Complete</h3>
+              <h3 className="text-lg font-medium text-green-800 mb-2">
+                Content Analysis Complete
+              </h3>
               <p className="text-sm text-green-700">
-                {analysisResults ? "Your content has been analyzed! The system has determined the best content type for your topic." : "Processing content..."}
+                {analysisResults
+                  ? "Your content has been analyzed! The system has determined the best content type for your topic."
+                  : "Processing content..."}
               </p>
             </div>
-            
+
             {detectedContentType.key && (
               <div className="border border-blue-200 rounded-md overflow-hidden bg-blue-50">
-                <h4 className="text-md font-semibold p-3 bg-blue-100">Detected Content Type: {detectedContentType.name}</h4>
-                
+                <h4 className="text-md font-semibold p-3 bg-blue-100">
+                  Detected Content Type: {detectedContentType.name}
+                </h4>
+
                 <div className="p-4 space-y-4">
                   <div className="space-y-2">
-                    <h5 className="text-sm font-medium">Recommended Structure</h5>
+                    <h5 className="text-sm font-medium">
+                      Recommended Structure
+                    </h5>
                     <div className="text-sm text-slate-600 space-y-1 bg-white p-3 rounded-md">
-                      {CONTENT_TEMPLATES[detectedContentType.key].template.structure.map(
-                        (item, index) => (
-                          <div key={index}>{item}</div>
-                        )
-                      )}
+                      {CONTENT_TEMPLATES[
+                        detectedContentType.key
+                      ].template.structure.map((item, index) => (
+                        <div key={index}>{item}</div>
+                      ))}
                     </div>
                   </div>
 
                   <div className="space-y-2">
                     <h5 className="text-sm font-medium">Optimization Tips</h5>
                     <div className="text-sm text-slate-600 space-y-1 bg-white p-3 rounded-md">
-                      {CONTENT_TEMPLATES[detectedContentType.key].template.optimization.map(
-                        (item, index) => (
-                          <div key={index}>• {item}</div>
-                        )
-                      )}
+                      {CONTENT_TEMPLATES[
+                        detectedContentType.key
+                      ].template.optimization.map((item, index) => (
+                        <div key={index}>• {item}</div>
+                      ))}
                     </div>
                   </div>
                 </div>
               </div>
             )}
-            
+
             {analysisResults && (
               <div className="border border-slate-200 rounded-md overflow-hidden">
                 <div className="bg-slate-100 p-3 flex justify-between items-center">
-                  <h4 className="text-md font-semibold">Content Analysis Results</h4>
+                  <h4 className="text-md font-semibold">
+                    Content Analysis Results
+                  </h4>
                   <div className="flex gap-2">
-                    <Button 
-                      variant="outline" 
-                      size="sm" 
+                    <Button
+                      variant="outline"
+                      size="sm"
                       className="gap-1"
                       onClick={handleCopyAnalysis}
                     >
                       <ClipboardCopy className="h-4 w-4" />
                       {copySuccess ? "Copied!" : "Copy"}
                     </Button>
-                    <Button 
-                      variant="outline" 
-                      size="sm" 
+                    <Button
+                      variant="outline"
+                      size="sm"
                       className="gap-1"
                       onClick={handleDownloadAnalysis}
                     >
@@ -347,47 +384,72 @@ Please analyze and provide:
                     </Button>
                   </div>
                 </div>
-                
+
                 <div className="max-h-96 overflow-y-auto p-4 bg-white">
                   <div className="prose prose-sm">
-                    {analysisResults.split('\n').map((line, index) => {
-                      if (line.startsWith('# ')) {
-                        return <h1 key={index} className="text-xl font-bold mt-4 mb-2">{line.substring(2)}</h1>;
-                      } else if (line.startsWith('## ')) {
-                        return <h2 key={index} className="text-lg font-semibold mt-3 mb-2">{line.substring(3)}</h2>;
-                      } else if (line.startsWith('* ')) {
-                        return <div key={index} className="flex gap-2 my-1">
-                          <span>•</span>
-                          <span>{line.substring(2)}</span>
-                        </div>;
-                      } else if (line.startsWith('---')) {
-                        return <hr key={index} className="my-3 border-slate-200" />;
+                    {analysisResults.split("\n").map((line, index) => {
+                      if (line.startsWith("# ")) {
+                        return (
+                          <h1
+                            key={index}
+                            className="text-xl font-bold mt-4 mb-2"
+                          >
+                            {line.substring(2)}
+                          </h1>
+                        );
+                      } else if (line.startsWith("## ")) {
+                        return (
+                          <h2
+                            key={index}
+                            className="text-lg font-semibold mt-3 mb-2"
+                          >
+                            {line.substring(3)}
+                          </h2>
+                        );
+                      } else if (line.startsWith("* ")) {
+                        return (
+                          <div key={index} className="flex gap-2 my-1">
+                            <span>•</span>
+                            <span>{line.substring(2)}</span>
+                          </div>
+                        );
+                      } else if (line.startsWith("---")) {
+                        return (
+                          <hr key={index} className="my-3 border-slate-200" />
+                        );
                       } else if (line.match(/^\d+\./)) {
-                        const parts = line.split('. ');
-                        return <div key={index} className="flex gap-2 my-1">
-                          <span>{parts[0]}.</span>
-                          <span>{parts.slice(1).join('. ')}</span>
-                        </div>;
-                      } else if (line === '') {
+                        const parts = line.split(". ");
+                        return (
+                          <div key={index} className="flex gap-2 my-1">
+                            <span>{parts[0]}.</span>
+                            <span>{parts.slice(1).join(". ")}</span>
+                          </div>
+                        );
+                      } else if (line === "") {
                         return <div key={index} className="h-2"></div>;
                       } else {
-                        return <p key={index} className="my-1">{line}</p>;
+                        return (
+                          <p key={index} className="my-1">
+                            {line}
+                          </p>
+                        );
                       }
                     })}
                   </div>
                 </div>
               </div>
             )}
-            
+
             {isAnalyzing && (
               <div className="flex flex-col items-center justify-center py-8 space-y-4">
                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
                 <div className="text-center font-medium text-slate-500">
-                  Analyzing your content and determining the optimal content type...
+                  Analyzing your content and determining the optimal content
+                  type...
                 </div>
               </div>
             )}
-            
+
             <Button
               onClick={handleContinue}
               className="w-full bg-green-600 hover:bg-green-700"
