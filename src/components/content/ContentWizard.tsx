@@ -41,6 +41,7 @@ const ContentWizard = () => {
     analysis: string;
   } | null>(null);
   const [partNumber, setPartNumber] = useState(0);
+  const [styleAnalysis, setStyleAnalysis] = useState("");
 
   // Store configurations
   const [modelConfig, setModelConfig] = useState<ModelConfig | null>(null);
@@ -99,6 +100,47 @@ const ContentWizard = () => {
     }
   };
 
+  const handleStep3Complete = (
+    analysis: string,
+    kw: string,
+    research: string,
+  ) => {
+    try {
+      setAnalysisPrompt(analysis);
+      setKeyword(kw);
+      setResearchContent(research);
+      setResearchData({
+        keyword: kw,
+        research: research,
+        analysis: analysis,
+      });
+      setCurrentStep(4);
+    } catch (error) {
+      console.error("Analysis error:", error);
+      toast({
+        title: "Analysis Error",
+        description:
+          error instanceof Error ? error.message : "An unknown error occurred",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleStep4Complete = (analysis: string) => {
+    try {
+      setStyleAnalysis(analysis);
+      setCurrentStep(5);
+    } catch (error) {
+      console.error("Style analysis error:", error);
+      toast({
+        title: "Style Analysis Error",
+        description:
+          error instanceof Error ? error.message : "An unknown error occurred",
+        variant: "destructive",
+      });
+    }
+  };
+
   // Get active API key for search
   const getSearchConfig = (): SearchConfig | null => {
     const activeKey = apiKeys.find((key) => key.isActive);
@@ -133,30 +175,25 @@ const ContentWizard = () => {
         <Step3Review
           results={searchResults}
           modelConfig={modelConfig}
-          onNext={(analysis, kw, research) => {
-            setAnalysisPrompt(analysis);
-            setKeyword(kw);
-            setResearchContent(research);
-            setResearchData({
-              keyword: kw,
-              research: research,
-              analysis: analysis,
-            });
-            setCurrentStep(4);
-          }}
+          onNext={handleStep3Complete}
           onBack={() => setCurrentStep(2)}
         />
       )}
       {currentStep === 4 && modelConfig && (
         <Step4Analysis
           modelConfig={modelConfig}
-          onNext={(analysis) => setCurrentStep(5)}
+          keyword={keyword}
+          researchContent={researchContent}
+          onNext={handleStep4Complete}
           onBack={() => setCurrentStep(3)}
         />
       )}
       {currentStep === 5 && modelConfig && (
         <Step5Structure
           modelConfig={modelConfig}
+          keyword={keyword}
+          researchContent={researchContent}
+          styleAnalysis={styleAnalysis}
           onNext={(analysis, number) => {
             setPartNumber(number);
             setCurrentStep(6);

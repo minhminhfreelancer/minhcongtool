@@ -13,11 +13,25 @@ import {
 
 export interface Step4AnalysisProps {
   modelConfig: ModelConfig;
+  keyword: string;
+  researchContent: string; // Add researchContent as a prop
   onBack: () => void;
   onNext: (analysis: string) => void;
 }
 
-const DEFAULT_PROMPT = `Based on 'KEYWORD.TXT', analyze the characteristics of the content writer. Detail the writing style to guide others in writing similarly.`;
+const DEFAULT_PROMPT = `Based on the following research content about "[KEYWORD]", analyze the characteristics of the content writers. Detail the writing style to guide others in writing similarly on this topic.
+
+Include analysis of:
+1. Tone and voice (formal, conversational, technical)
+2. Sentence structure and length
+3. Vocabulary level and specialized terminology usage
+4. Paragraph organization and flow
+5. Use of questions, commands, or other engagement techniques
+6. Content formatting patterns (lists, headers, quotes)
+7. Overall readability and target audience level
+
+Research content:
+[CONTENT]`;
 
 const RECOMMENDED_MODELS = [
   {
@@ -30,27 +44,29 @@ const RECOMMENDED_MODELS = [
   },
 ];
 
-const Step4Analysis = ({ modelConfig, onBack, onNext }: Step4AnalysisProps) => {
+const Step4Analysis = ({
+  modelConfig,
+  keyword,
+  researchContent,
+  onBack,
+  onNext,
+}: Step4AnalysisProps) => {
+  // Initialize the prompt with the actual keyword and content
+  const initializedPrompt = DEFAULT_PROMPT.replace(
+    "[KEYWORD]",
+    keyword,
+  ).replace("[CONTENT]", researchContent);
+
   const [selectedModel, setSelectedModel] = useState(
     RECOMMENDED_MODELS[0].name,
   );
-  const [prompt, setPrompt] = useState(DEFAULT_PROMPT);
+  const [prompt, setPrompt] = useState(initializedPrompt);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [contentPreviewExpanded, setContentPreviewExpanded] = useState(false);
 
   const handleProcess = async () => {
     setIsProcessing(true);
     try {
-      // Save prompt to GUIDE.TXT
-      const promptBlob = new Blob([prompt], { type: "text/plain" });
-      const promptUrl = URL.createObjectURL(promptBlob);
-      const a = document.createElement("a");
-      a.href = promptUrl;
-      a.download = "GUIDE.TXT";
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(promptUrl);
-
       // Move to next step
       onNext(prompt);
     } catch (error) {
@@ -100,6 +116,37 @@ const Step4Analysis = ({ modelConfig, onBack, onNext }: Step4AnalysisProps) => {
             onChange={(e) => setPrompt(e.target.value)}
             className="min-h-[100px] font-mono text-sm"
           />
+          <p className="text-xs text-slate-500">
+            The prompt automatically includes your keyword and research content.
+            You can customize the analysis instructions above.
+          </p>
+        </div>
+
+        <div className="border border-slate-200 rounded-md overflow-hidden">
+          <div
+            className="bg-slate-100 p-3 flex justify-between items-center cursor-pointer"
+            onClick={() => setContentPreviewExpanded(!contentPreviewExpanded)}
+          >
+            <h4 className="text-sm font-medium">Content Preview</h4>
+            <span>{contentPreviewExpanded ? "▲" : "▼"}</span>
+          </div>
+
+          {contentPreviewExpanded && (
+            <div className="max-h-60 overflow-y-auto p-4 bg-white">
+              <div className="space-y-2">
+                <p>
+                  <strong>Keyword:</strong> {keyword}
+                </p>
+                <p>
+                  <strong>Research Content:</strong> {researchContent.length}{" "}
+                  characters
+                </p>
+                <div className="text-xs font-mono bg-slate-50 p-2 rounded">
+                  {researchContent.substring(0, 300)}...
+                </div>
+              </div>
+            </div>
+          )}
         </div>
 
         <Button

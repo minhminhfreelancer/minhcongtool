@@ -145,13 +145,16 @@ const Step3Review = ({
   const DEFAULT_PROMPT = `This is research content about articles on [keyword]: [CONTENT]
 
 Please analyze and provide:
-1. Common article structures
-2. Main and secondary sections
-3. Key points mentioned
+1. Common article structures with specific section breakdowns
+2. Main and secondary sections with examples from top-performing content
+3. Key points mentioned and their frequency across articles
 4. Unique perspectives from each article
-5. Strengths/weaknesses of each article
-6. Opportunities for differentiation
-7. Content type (choose 1): Pillar Content/Supporting Content/Informational Content/Commercial Content/Engagement Content/News/Updates`;
+5. Strengths/weaknesses of each article with specific examples
+6. Competitor gap analysis highlighting content opportunities
+7. User intent classification based on content analysis
+8. Visual content recommendations
+9. Primary and secondary keyword recommendations
+10. Content type classification: Pillar Content/Supporting Content/Informational Content/Commercial Content/Engagement Content/News/Updates`;
 
   const [prompt, setPrompt] = useState("");
   const [isProcessing, setIsProcessing] = useState(false);
