@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, ChevronDown, ChevronUp, Info } from "lucide-react";
 import { ModelConfig } from "../ContentWizard";
 import { Textarea } from "@/components/ui/textarea";
 import {
@@ -13,8 +13,13 @@ import {
 
 export interface Step6ReviewProps {
   modelConfig: ModelConfig;
+  keyword: string;
+  researchContent: string;
+  styleAnalysis: string;
+  contentOutline: string;
+  contentTypeName: string;
   onBack: () => void;
-  onNext: (guideContent: string, outlineContent: string) => void;
+  onNext: (styleGuide: string, finalOutline: string) => void;
 }
 
 const RECOMMENDED_MODELS = [
@@ -23,29 +28,40 @@ const RECOMMENDED_MODELS = [
     description: "Best choice - Complex reasoning and analysis",
   },
   {
-    name: "gemini-2.0-flash-thinking-exp-01-21",
+    name: "claude-3-5-sonnet",
     description: "Alternative - Specialized in content review",
   },
 ];
 
-const Step6Review = ({ modelConfig, onBack, onNext }: Step6ReviewProps) => {
+const Step6Review = ({
+  modelConfig,
+  keyword,
+  researchContent,
+  styleAnalysis,
+  contentOutline,
+  contentTypeName,
+  onBack,
+  onNext,
+}: Step6ReviewProps) => {
   const [selectedModel, setSelectedModel] = useState(
     RECOMMENDED_MODELS[0].name,
   );
   const [guideContent, setGuideContent] = useState("");
   const [outlineContent, setOutlineContent] = useState("");
   const [isProcessing, setIsProcessing] = useState(false);
+  const [showStyleGuide, setShowStyleGuide] = useState(true);
+  const [showContentOutline, setShowContentOutline] = useState(true);
 
   useEffect(() => {
-    // Simulate loading content from files
-    setGuideContent("[Content from GUIDE.TXT will appear here]");
-    setOutlineContent("[Content from OUTLINE.TXT will appear here]");
-  }, []);
+    // Initialize with actual data from previous steps
+    setGuideContent(styleAnalysis || "No style analysis available");
+    setOutlineContent(contentOutline || "No content outline available");
+  }, [styleAnalysis, contentOutline]);
 
   const handleProcess = async () => {
     setIsProcessing(true);
     try {
-      // Save updated content
+      // Pass the finalized style guide and outline to the next step
       onNext(guideContent, outlineContent);
     } catch (error) {
       console.error("Error processing content:", error);
@@ -60,7 +76,7 @@ const Step6Review = ({ modelConfig, onBack, onNext }: Step6ReviewProps) => {
         <div className="space-y-1">
           <h2 className="text-2xl font-semibold">Step 6: Review Content</h2>
           <p className="text-sm text-muted-foreground">
-            Review and edit the generated content
+            Review and edit the generated style guide and content outline
           </p>
         </div>
         <Button variant="ghost" size="icon" onClick={onBack}>
@@ -68,9 +84,25 @@ const Step6Review = ({ modelConfig, onBack, onNext }: Step6ReviewProps) => {
         </Button>
       </div>
 
+      <div className="bg-blue-50 border border-blue-100 rounded-md p-4">
+        <div className="flex items-start gap-3">
+          <Info className="h-5 w-5 text-blue-500 mt-0.5" />
+          <div className="space-y-1">
+            <h3 className="font-medium text-blue-800">Content Summary</h3>
+            <p className="text-sm text-blue-700">
+              Keyword: <span className="font-semibold">{keyword}</span>
+            </p>
+            <p className="text-sm text-blue-700">
+              Content Type:{" "}
+              <span className="font-semibold">{contentTypeName}</span>
+            </p>
+          </div>
+        </div>
+      </div>
+
       <div className="space-y-6">
         <div className="space-y-2">
-          <label className="text-sm font-medium">Select Model</label>
+          <label className="text-sm font-medium">Select Review Model</label>
           <Select value={selectedModel} onValueChange={setSelectedModel}>
             <SelectTrigger>
               <SelectValue placeholder="Select model" />
@@ -86,24 +118,66 @@ const Step6Review = ({ modelConfig, onBack, onNext }: Step6ReviewProps) => {
         </div>
 
         <div className="space-y-4">
-          <div className="space-y-2">
-            <label className="text-sm font-medium">Writing Style Guide</label>
-            <Textarea
-              value={guideContent}
-              onChange={(e) => setGuideContent(e.target.value)}
-              className="min-h-[200px] font-mono text-sm"
-              placeholder="Content from GUIDE.TXT will appear here"
-            />
+          <div className="border border-slate-200 rounded-md overflow-hidden">
+            <div
+              className="bg-slate-100 p-3 flex justify-between items-center cursor-pointer"
+              onClick={() => setShowStyleGuide(!showStyleGuide)}
+            >
+              <h4 className="text-md font-medium">Writing Style Guide</h4>
+              <span>
+                {showStyleGuide ? (
+                  <ChevronUp className="h-4 w-4" />
+                ) : (
+                  <ChevronDown className="h-4 w-4" />
+                )}
+              </span>
+            </div>
+
+            {showStyleGuide && (
+              <div className="p-3">
+                <p className="text-xs text-slate-500 mb-2">
+                  Review and edit the writing style guide that will inform the
+                  tone and structure of your content.
+                </p>
+                <Textarea
+                  value={guideContent}
+                  onChange={(e) => setGuideContent(e.target.value)}
+                  className="min-h-[200px] font-mono text-sm"
+                  placeholder="Writing style guide will appear here"
+                />
+              </div>
+            )}
           </div>
 
-          <div className="space-y-2">
-            <label className="text-sm font-medium">Content Outline</label>
-            <Textarea
-              value={outlineContent}
-              onChange={(e) => setOutlineContent(e.target.value)}
-              className="min-h-[300px] font-mono text-sm"
-              placeholder="Content from OUTLINE.TXT will appear here"
-            />
+          <div className="border border-slate-200 rounded-md overflow-hidden">
+            <div
+              className="bg-slate-100 p-3 flex justify-between items-center cursor-pointer"
+              onClick={() => setShowContentOutline(!showContentOutline)}
+            >
+              <h4 className="text-md font-medium">Content Outline</h4>
+              <span>
+                {showContentOutline ? (
+                  <ChevronUp className="h-4 w-4" />
+                ) : (
+                  <ChevronDown className="h-4 w-4" />
+                )}
+              </span>
+            </div>
+
+            {showContentOutline && (
+              <div className="p-3">
+                <p className="text-xs text-slate-500 mb-2">
+                  Review and edit the content outline that will structure your
+                  final article.
+                </p>
+                <Textarea
+                  value={outlineContent}
+                  onChange={(e) => setOutlineContent(e.target.value)}
+                  className="min-h-[300px] font-mono text-sm"
+                  placeholder="Content outline will appear here"
+                />
+              </div>
+            )}
           </div>
         </div>
 
@@ -112,7 +186,7 @@ const Step6Review = ({ modelConfig, onBack, onNext }: Step6ReviewProps) => {
           className="w-full"
           disabled={isProcessing}
         >
-          {isProcessing ? "Processing..." : "Next Step"}
+          {isProcessing ? "Processing..." : "Approve and Continue"}
         </Button>
       </div>
     </div>
