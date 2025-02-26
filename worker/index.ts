@@ -1,5 +1,11 @@
+// Import Cloudflare Workers types
+import { D1Database, ExecutionContext } from '@cloudflare/workers-types';
+
 interface Env {
   DB: D1Database;
+  GEMINI_API_KEYS: string; // Comma-separated list of API keys
+  GOOGLE_SEARCH_API_KEY: string;
+  GOOGLE_SEARCH_ENGINE_ID: string;
 }
 
 const corsHeaders = {
@@ -29,11 +35,77 @@ export default {
         return handleFetchContent(request);
       case "/api/search-history":
         return handleSearchHistory(request, env);
+      case "/api/gemini-keys":
+        return handleGeminiKeys(env);
+      case "/api/search-config":
+        return handleSearchConfig(env);
       default:
         return new Response("Not found", { status: 404 });
     }
   },
 };
+
+// Return the Gemini API keys
+async function handleGeminiKeys(env: Env): Promise<Response> {
+  try {
+    // Get the API keys from environment variable
+    const apiKeysString = env.GEMINI_API_KEYS || "";
+    const apiKeys = apiKeysString.split(",").map((key, index) => ({
+      key: key.trim(),
+      isActive: index === 0, // Make the first key active by default
+    }));
+
+    return new Response(JSON.stringify({ apiKeys }), {
+      headers: {
+        ...corsHeaders,
+        "Content-Type": "application/json",
+      },
+    });
+  } catch (error) {
+    return new Response(
+      JSON.stringify({
+        error: error instanceof Error ? error.message : "Unknown error",
+      }),
+      {
+        status: 500,
+        headers: {
+          ...corsHeaders,
+          "Content-Type": "application/json",
+        },
+      },
+    );
+  }
+}
+
+// Return the Google Search configuration
+async function handleSearchConfig(env: Env): Promise<Response> {
+  try {
+    const config = {
+      apiKey: env.GOOGLE_SEARCH_API_KEY || "",
+      searchEngineId: env.GOOGLE_SEARCH_ENGINE_ID || "",
+    };
+
+    return new Response(JSON.stringify({ config }), {
+      headers: {
+        ...corsHeaders,
+        "Content-Type": "application/json",
+      },
+    });
+  } catch (error) {
+    return new Response(
+      JSON.stringify({
+        error: error instanceof Error ? error.message : "Unknown error",
+      }),
+      {
+        status: 500,
+        headers: {
+          ...corsHeaders,
+          "Content-Type": "application/json",
+        },
+      },
+    );
+  }
+}
 
 async function handleFetchContent(request: Request): Promise<Response> {
   const url = new URL(request.url);

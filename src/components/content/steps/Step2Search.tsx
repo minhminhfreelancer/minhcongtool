@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Search, ArrowLeft, Download } from "lucide-react";
@@ -17,21 +17,24 @@ import {
   htmlToMarkdown,
   downloadTextFile,
 } from "@/lib/search";
-import { ModelConfig, SearchConfig } from "../ContentWizard";
+import { ModelConfig, SearchCredentials } from "../ContentWizard";
+import { toast } from "@/components/ui/use-toast";
 
 export interface Step2SearchProps {
-  config: SearchConfig;
+  getConfig: () => Promise<SearchCredentials | null>;
   modelConfig: ModelConfig;
   onNext: (results: SearchResult[]) => void;
   onBack: () => void;
 }
 
 const Step2Search = ({
-  config,
+  getConfig,
   modelConfig,
   onNext,
   onBack,
 }: Step2SearchProps) => {
+  const [config, setConfig] = useState<SearchCredentials | null>(null);
+  const [isLoadingConfig, setIsLoadingConfig] = useState(false);
   const [keyword, setKeyword] = useState("");
   const [selectedCountry, setSelectedCountry] = useState("us");
   const [isLoading, setIsLoading] = useState(false);
@@ -40,6 +43,36 @@ const Step2Search = ({
   const [currentProgress, setCurrentProgress] = useState(0);
   const [totalProgress, setTotalProgress] = useState(0);
   const [hasErrors, setHasErrors] = useState(false);
+
+  // Load search configuration on mount
+  useEffect(() => {
+    loadSearchConfig();
+  }, []);
+
+  const loadSearchConfig = async () => {
+    setIsLoadingConfig(true);
+    try {
+      const searchConfig = await getConfig();
+      if (searchConfig) {
+        setConfig(searchConfig);
+      } else {
+        toast({
+          title: "Configuration Error",
+          description: "Failed to load search configuration",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      console.error("Error loading search config:", error);
+      toast({
+        title: "Error",
+        description: "Failed to load search configuration",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoadingConfig(false);
+    }
+  };
 
   const handleSearch = async () => {
     setResults([]);
@@ -103,8 +136,8 @@ const Step2Search = ({
     const content = results
       .map((result) => {
         // Convert HTML content to markdown if available
-        const markdownContent = result.content
-          ? htmlToMarkdown(result.content)
+        const markdownContent = result.htmlContent
+          ? htmlToMarkdown(result.htmlContent)
           : result.snippet || "No content available";
 
         // Create a formatted markdown document
@@ -130,30 +163,55 @@ const Step2Search = ({
         </Button>
       </div>
 
-      <div className="flex items-center gap-4">
-        <Input
-          value={keyword}
-          onChange={(e) => setKeyword(e.target.value)}
-          placeholder="Enter search keyword..."
-          className="flex-1"
-        />
-        <Select value={selectedCountry} onValueChange={setSelectedCountry}>
-          <SelectTrigger className="w-[180px]">
-            <SelectValue placeholder="Select country" />
-          </SelectTrigger>
-          <SelectContent>
-            {COUNTRY_CODES.map((country) => (
-              <SelectItem key={country.code} value={country.code}>
-                {country.name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        <Button onClick={handleSearch} className="gap-2" disabled={isLoading}>
-          <Search className="h-4 w-4" />
-          {isLoading ? "Searching..." : "Search"}
-        </Button>
+      <div className="flex items-center gap-4 flex-wrap">
+        <div className="flex items-center gap-2">
+          <Input
+            value={keyword}
+            onChange={(e) => setKeyword(e.target.value)}
+            placeholder="Enter search keyword..."
+            className="flex-1 min-w-[200px]"
+          />
+          <Select value={selectedCountry} onValueChange={setSelectedCountry}>
+            <SelectTrigger className="w-[150px]">
+              <SelectValue placeholder="Select country" />
+            </SelectTrigger>
+            <SelectContent>
+              {COUNTRY_CODES.map((country) => (
+                <SelectItem key={country.code} value={country.code}>
+                  {country.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="flex gap-2">
+          <Button 
+            onClick={loadSearchConfig} 
+            variant="outline" 
+            size="icon" 
+            disabled={isLoadingConfig}
+            title="Refresh search configuration"
+          >
+            <span className={`text-xs ${isLoadingConfig ? 'animate-spin' : ''}`}>🔄</span>
+          </Button>
+          <Button 
+            onClick={handleSearch} 
+            className="gap-2" 
+            disabled={isLoading || !config}
+          >
+            <Search className="h-4 w-4" />
+            {isLoading ? "Searching..." : "Search"}
+          </Button>
+        </div>
       </div>
+
+      {!config && !isLoadingConfig && (
+        <div className="p-3 bg-amber-50 border border-amber-200 rounded-md">
+          <p className="text-sm text-amber-700">
+            No search configuration found. Please refresh to load configuration from the server.
+          </p>
+        </div>
+      )}
 
       {(isLoading || progressMessage) && (
         <div className="flex flex-col items-center justify-center py-8 space-y-4">
