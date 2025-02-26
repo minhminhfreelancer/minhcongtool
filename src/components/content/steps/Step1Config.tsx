@@ -1,9 +1,9 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import { Input } from "@/components/ui/input";
 import { Slider } from "@/components/ui/slider";
 import ApiKeyManager from "@/components/chat/ApiKeyManager";
+import ConfigManager from "@/components/chat/ConfigManager";
 import { StoredApiKey } from "@/lib/storage";
 import {
   Select,
@@ -14,19 +14,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger,
-} from "@/components/ui/accordion";
 import { AVAILABLE_MODELS } from "@/types/models";
 import { ModelConfig } from "../ContentWizard";
-import { HelpCircle } from "lucide-react";
-import {
-  loadSearchCredentials,
-  saveSearchCredentials,
-} from "@/lib/searchConfig";
+import { SearchCredentials } from "@/lib/searchConfig";
+import { toast } from "@/components/ui/use-toast";
 
 export interface Step1ConfigProps {
   onNext: (config: ModelConfig) => void;
@@ -43,14 +34,16 @@ const Step1Config = ({
   const [temperature, setTemperature] = useState(0.7);
   const [topP, setTopP] = useState(0.7);
   const [maxTokens, setMaxTokens] = useState(32000);
-  const [searchApiKey, setSearchApiKey] = useState(() => {
-    const saved = loadSearchCredentials();
-    return saved?.apiKey || "";
-  });
-  const [searchEngineId, setSearchEngineId] = useState(() => {
-    const saved = loadSearchCredentials();
-    return saved?.searchEngineId || "";
-  });
+  const [searchConfig, setSearchConfig] = useState<SearchCredentials | null>(null);
+  const [isConfigValid, setIsConfigValid] = useState(false);
+
+  // Validate configuration whenever dependencies change
+  useEffect(() => {
+    const hasActiveKey = apiKeys.some(key => key.isActive);
+    const hasSearchConfig = searchConfig && searchConfig.apiKey && searchConfig.searchEngineId;
+    
+    setIsConfigValid(hasActiveKey && !!hasSearchConfig);
+  }, [apiKeys, searchConfig]);
 
   // Group models by family
   const geminiStandardModels = AVAILABLE_MODELS.filter(
@@ -63,6 +56,28 @@ const Step1Config = ({
 
   const currentModel = AVAILABLE_MODELS.find((m) => m.name === selectedModel);
 
+  const handleConfigChange = (config: SearchCredentials) => {
+    setSearchConfig(config);
+  };
+
+  const handleNext = () => {
+    if (!isConfigValid) {
+      toast({
+        title: "Configuration Error",
+        description: "Please ensure you have valid API keys and search configuration",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    onNext({
+      model: selectedModel,
+      temperature,
+      topP,
+      maxTokens,
+    });
+  };
+
   return (
     <div className="w-full max-w-3xl mx-auto space-y-6 p-6 bg-white rounded-lg shadow-sm">
       <div className="space-y-2">
@@ -73,126 +88,22 @@ const Step1Config = ({
       </div>
 
       <div className="space-y-6">
-        {/* Gemini API Configuration */}
+        {/* API Configuration */}
         <div className="space-y-4">
-          <h3 className="text-lg font-medium">Gemini API Configuration</h3>
-          <div className="flex items-center gap-4">
+          <h3 className="text-lg font-medium">API Configuration</h3>
+          <div className="flex items-center gap-4 flex-wrap">
             <ApiKeyManager
               apiKeys={apiKeys}
               onApiKeysChange={onApiKeysChange}
             />
+            <ConfigManager onConfigChange={handleConfigChange} />
           </div>
-        </div>
-
-        {/* Google Custom Search Configuration */}
-        <div className="space-y-4">
-          <div className="flex items-center gap-2">
-            <h3 className="text-lg font-medium">
-              Google Custom Search Configuration
-            </h3>
-            <Button variant="ghost" size="icon" className="h-5 w-5" asChild>
-              <a
-                href="https://programmablesearchengine.google.com/"
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                <HelpCircle className="h-4 w-4" />
-              </a>
-            </Button>
+          <div className="p-3 bg-blue-50 border border-blue-200 rounded-md">
+            <p className="text-sm text-blue-700">
+              API keys and search configuration are loaded from the server. 
+              The refresh buttons will reload the latest configuration.
+            </p>
           </div>
-
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <Label>Search API Key</Label>
-              <Input
-                type="password"
-                value={searchApiKey}
-                onChange={(e) => {
-                  const newValue = e.target.value;
-                  setSearchApiKey(newValue);
-                  saveSearchCredentials({
-                    apiKey: newValue,
-                    searchEngineId,
-                  });
-                }}
-                placeholder="Enter your Google Custom Search API Key"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label>Search Engine ID</Label>
-              <Input
-                value={searchEngineId}
-                onChange={(e) => {
-                  const newValue = e.target.value;
-                  setSearchEngineId(newValue);
-                  saveSearchCredentials({
-                    apiKey: searchApiKey,
-                    searchEngineId: newValue,
-                  });
-                }}
-                placeholder="Enter your Search Engine ID (cx)"
-              />
-            </div>
-          </div>
-
-          <Accordion type="single" collapsible className="w-full">
-            <AccordionItem value="setup-guide">
-              <AccordionTrigger className="text-sm">
-                Setup Guide
-              </AccordionTrigger>
-              <AccordionContent className="space-y-4 text-sm">
-                <div className="space-y-2">
-                  <h4 className="font-medium">
-                    1. Create Custom Search Engine
-                  </h4>
-                  <ol className="list-decimal list-inside space-y-1 text-slate-600">
-                    <li>
-                      Go to{" "}
-                      <a
-                        href="https://programmablesearchengine.google.com/"
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-blue-600 hover:underline"
-                      >
-                        Google Programmable Search Engine
-                      </a>
-                    </li>
-                    <li>Click "Create a new search engine"</li>
-                    <li>Enter a name and select "Search the entire web"</li>
-                    <li>
-                      After creation, find your Search Engine ID (cx) in the
-                      setup details
-                    </li>
-                  </ol>
-                </div>
-
-                <div className="space-y-2">
-                  <h4 className="font-medium">2. Get API Key</h4>
-                  <ol className="list-decimal list-inside space-y-1 text-slate-600">
-                    <li>
-                      Visit{" "}
-                      <a
-                        href="https://console.cloud.google.com/"
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-blue-600 hover:underline"
-                      >
-                        Google Cloud Console
-                      </a>
-                    </li>
-                    <li>Create a new project or select existing one</li>
-                    <li>Enable Custom Search API in API Library</li>
-                    <li>Go to Credentials and create an API key</li>
-                  </ol>
-                </div>
-
-                <div className="bg-slate-50 p-3 rounded text-xs text-slate-600">
-                  <strong>Note:</strong> Free tier includes 100 searches per
-                  day. For higher limits, billing must be enabled.
-                </div>
-              </AccordionContent>
-            </AccordionItem>
-          </Accordion>
         </div>
 
         {/* Model Configuration */}
@@ -310,15 +221,8 @@ const Step1Config = ({
       <Button
         className="w-full"
         size="lg"
-        onClick={() => {
-          onNext({
-            model: selectedModel,
-            temperature,
-            topP,
-            maxTokens,
-          });
-        }}
-        disabled={!searchApiKey || !searchEngineId}
+        onClick={handleNext}
+        disabled={!isConfigValid}
       >
         Next Step
       </Button>

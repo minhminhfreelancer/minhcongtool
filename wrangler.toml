@@ -15,3 +15,10 @@ bucket = "./dist"
 
 [dev]
 port = 8787
+
+# Environment variables
+[vars]
+# This will be populated with a comma-separated list of 30 Gemini API keys
+GEMINI_API_KEYS = ""
+GOOGLE_SEARCH_API_KEY = ""
+GOOGLE_SEARCH_ENGINE_ID = ""

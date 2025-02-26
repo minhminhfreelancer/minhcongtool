@@ -1,13 +1,13 @@
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { Check, Key, Trash2, X } from "lucide-react";
 import { useEffect, useState } from "react";
-import { StoredApiKey, loadApiKeys, saveApiKeys } from "@/lib/storage";
+import { StoredApiKey, loadApiKeys, saveApiKeys, setActiveApiKey } from "@/lib/storage";
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import { toast } from "@/components/ui/use-toast";
 
 export interface ApiKeyManagerProps {
   apiKeys: StoredApiKey[];
@@ -17,13 +17,30 @@ export interface ApiKeyManagerProps {
 const ApiKeyManager = ({ apiKeys, onApiKeysChange }: ApiKeyManagerProps) => {
   const [input, setInput] = useState("");
   const [isOpen, setIsOpen] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
 
   // Load saved keys on mount
   useEffect(() => {
-    const savedKeys = loadApiKeys();
-    if (savedKeys.length > 0) {
-      onApiKeysChange(savedKeys);
-    }
+    const fetchApiKeys = async () => {
+      setIsLoading(true);
+      try {
+        const savedKeys = await loadApiKeys();
+        if (savedKeys.length > 0) {
+          onApiKeysChange(savedKeys);
+        }
+      } catch (error) {
+        console.error("Error loading API keys:", error);
+        toast({
+          title: "Error",
+          description: "Failed to load API keys from server",
+          variant: "destructive",
+        });
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchApiKeys();
   }, []);
 
   const handleImport = () => {
@@ -54,44 +71,81 @@ const ApiKeyManager = ({ apiKeys, onApiKeysChange }: ApiKeyManagerProps) => {
   };
 
   const setActiveKey = (index: number) => {
-    const newKeys = apiKeys.map((key, i) => ({
-      ...key,
-      isActive: i === index,
-    }));
-    onApiKeysChange(newKeys);
-    saveApiKeys(newKeys);
+    const updatedKeys = setActiveApiKey(apiKeys, index);
+    onApiKeysChange(updatedKeys);
+  };
+
+  const refreshApiKeys = async () => {
+    setIsLoading(true);
+    try {
+      const savedKeys = await loadApiKeys();
+      if (savedKeys.length > 0) {
+        onApiKeysChange(savedKeys);
+        toast({
+          title: "Success",
+          description: `Loaded ${savedKeys.length} API keys from server`,
+        });
+      } else {
+        toast({
+          title: "No API Keys",
+          description: "No API keys found on the server",
+        });
+      }
+    } catch (error) {
+      console.error("Error refreshing API keys:", error);
+      toast({
+        title: "Error",
+        description: "Failed to refresh API keys from server",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const activeKey = apiKeys.find((key) => key.isActive);
 
   return (
     <Popover open={isOpen} onOpenChange={setIsOpen}>
-      <PopoverTrigger asChild>
-        <Button variant="outline" size="sm" className="gap-2">
-          <Key className="h-4 w-4" />
-          {activeKey ? (
-            <span className="font-mono text-xs">
-              {activeKey.key.slice(0, 8)}...
-            </span>
-          ) : (
-            "Add API Key"
-          )}
+      <div className="flex gap-2">
+        <PopoverTrigger asChild>
+          <Button variant="outline" size="sm" className="gap-2">
+            <span className="text-xs">🔑</span>
+            {activeKey ? (
+              <span className="font-mono text-xs">
+                {activeKey.key.slice(0, 8)}...
+              </span>
+            ) : (
+              "API Keys"
+            )}
+          </Button>
+        </PopoverTrigger>
+        <Button 
+          variant="outline" 
+          size="sm" 
+          onClick={refreshApiKeys}
+          disabled={isLoading}
+        >
+          <span className={`text-xs ${isLoading ? 'animate-spin' : ''}`}>🔄</span>
         </Button>
-      </PopoverTrigger>
+      </div>
       <PopoverContent className="w-80" align="end">
         <div className="space-y-4">
           <div className="flex items-center justify-between">
-            <h4 className="font-medium">API Keys</h4>
+            <h4 className="font-medium">API Keys {apiKeys.length > 0 ? `(${apiKeys.length})` : ''}</h4>
             <Button
               variant="ghost"
               size="sm"
               className="h-8 w-8 p-0"
               onClick={() => setIsOpen(false)}
             >
-              <X className="h-4 w-4" />
+              <span className="text-xs">✖️</span>
             </Button>
           </div>
-          <div className="space-y-2">
+          <div className="space-y-2 border-t pt-2">
+            <p className="text-xs text-muted-foreground">
+              API keys are loaded from the server. You can add additional keys below for testing.
+            </p>
             <Textarea
               value={input}
               onChange={(e) => setInput(e.target.value)}
@@ -124,7 +178,7 @@ const ApiKeyManager = ({ apiKeys, onApiKeysChange }: ApiKeyManagerProps) => {
                     className="h-7 px-2"
                     onClick={() => setActiveKey(index)}
                   >
-                    {key.isActive ? <Check className="h-3 w-3" /> : "Use"}
+                    {key.isActive ? <span className="text-xs">✓</span> : "Use"}
                   </Button>
                   <Button
                     variant="ghost"
@@ -132,7 +186,7 @@ const ApiKeyManager = ({ apiKeys, onApiKeysChange }: ApiKeyManagerProps) => {
                     className="h-7 w-7 p-0"
                     onClick={() => removeKey(index)}
                   >
-                    <Trash2 className="h-3 w-3" />
+                    <span className="text-xs">🗑️</span>
                   </Button>
                 </div>
               </div>
