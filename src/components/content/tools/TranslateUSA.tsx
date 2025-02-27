@@ -4,6 +4,16 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ArrowLeft } from "lucide-react";
 import { ModelConfig } from "../ContentWizard";
 import { toast } from "@/components/ui/use-toast";
+import { AVAILABLE_MODELS } from "@/types/models";
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectLabel,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 interface TranslateUSAProps {
   modelConfig: ModelConfig;
@@ -18,6 +28,15 @@ const TranslateUSA = ({ modelConfig, onComplete, onBack }: TranslateUSAProps) =>
   const [htmlOutput, setHtmlOutput] = useState("");
   const [textOutput, setTextOutput] = useState("");
   const [activeTab, setActiveTab] = useState("html");
+  const [selectedModel, setSelectedModel] = useState(modelConfig.model);
+  
+  // Group models by family for the dropdown
+  const geminiStandardModels = AVAILABLE_MODELS.filter(
+    (m) => m.name.startsWith("gemini") && !m.name.includes("flash"),
+  );
+  const geminiFlashModels = AVAILABLE_MODELS.filter(
+    (m) => m.name.startsWith("gemini") && m.name.includes("flash"),
+  );
 
   const handleHtmlTranslate = async () => {
     if (!htmlInput.trim()) {
@@ -35,7 +54,7 @@ const TranslateUSA = ({ modelConfig, onComplete, onBack }: TranslateUSAProps) =>
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          model: modelConfig.model,
+          model: selectedModel,
           sourceLang: "Vietnamese",
           targetLang: "English",
           html: htmlInput,
@@ -84,7 +103,7 @@ const TranslateUSA = ({ modelConfig, onComplete, onBack }: TranslateUSAProps) =>
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          model: modelConfig.model,
+          model: selectedModel,
           text: textInput,
         }),
       });
@@ -146,6 +165,33 @@ const TranslateUSA = ({ modelConfig, onComplete, onBack }: TranslateUSAProps) =>
         <Button variant="ghost" size="icon" onClick={onBack}>
           <ArrowLeft className="h-4 w-4" />
         </Button>
+      </div>
+
+      <div className="mb-4">
+        <label className="text-sm font-medium mb-2 block">Model Selection</label>
+        <Select value={selectedModel} onValueChange={setSelectedModel}>
+          <SelectTrigger className="w-full max-w-xs">
+            <SelectValue placeholder="Select model" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectGroup>
+              <SelectLabel>Gemini Standard Models</SelectLabel>
+              {geminiStandardModels.map((model) => (
+                <SelectItem key={model.name} value={model.name}>
+                  {model.name}
+                </SelectItem>
+              ))}
+            </SelectGroup>
+            <SelectGroup>
+              <SelectLabel>Gemini Flash Models</SelectLabel>
+              {geminiFlashModels.map((model) => (
+                <SelectItem key={model.name} value={model.name}>
+                  {model.name}
+                </SelectItem>
+              ))}
+            </SelectGroup>
+          </SelectContent>
+        </Select>
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">

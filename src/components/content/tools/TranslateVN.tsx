@@ -3,6 +3,16 @@ import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
 import { ModelConfig } from "../ContentWizard";
 import { toast } from "@/components/ui/use-toast";
+import { AVAILABLE_MODELS } from "@/types/models";
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectLabel,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 interface TranslateVNProps {
   modelConfig: ModelConfig;
@@ -14,6 +24,15 @@ const TranslateVN = ({ modelConfig, onComplete, onBack }: TranslateVNProps) => {
   const [isLoading, setIsLoading] = useState(false);
   const [htmlInput, setHtmlInput] = useState("");
   const [htmlOutput, setHtmlOutput] = useState("");
+  const [selectedModel, setSelectedModel] = useState(modelConfig.model);
+  
+  // Group models by family for the dropdown
+  const geminiStandardModels = AVAILABLE_MODELS.filter(
+    (m) => m.name.startsWith("gemini") && !m.name.includes("flash"),
+  );
+  const geminiFlashModels = AVAILABLE_MODELS.filter(
+    (m) => m.name.startsWith("gemini") && m.name.includes("flash"),
+  );
   
   const handleHtmlTranslate = async () => {
     if (!htmlInput.trim()) {
@@ -32,7 +51,7 @@ const TranslateVN = ({ modelConfig, onComplete, onBack }: TranslateVNProps) => {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          model: modelConfig.model,
+          model: selectedModel,
           sourceLang: "English",
           targetLang: "Vietnamese",
           html: htmlInput,
@@ -98,7 +117,34 @@ const TranslateVN = ({ modelConfig, onComplete, onBack }: TranslateVNProps) => {
         </Button>
       </div>
 
-      <div className="space-y-4 mt-4">
+      <div className="mb-4">
+        <label className="text-sm font-medium mb-2 block">Model Selection</label>
+        <Select value={selectedModel} onValueChange={setSelectedModel}>
+          <SelectTrigger className="w-full max-w-xs">
+            <SelectValue placeholder="Select model" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectGroup>
+              <SelectLabel>Gemini Standard Models</SelectLabel>
+              {geminiStandardModels.map((model) => (
+                <SelectItem key={model.name} value={model.name}>
+                  {model.name}
+                </SelectItem>
+              ))}
+            </SelectGroup>
+            <SelectGroup>
+              <SelectLabel>Gemini Flash Models</SelectLabel>
+              {geminiFlashModels.map((model) => (
+                <SelectItem key={model.name} value={model.name}>
+                  {model.name}
+                </SelectItem>
+              ))}
+            </SelectGroup>
+          </SelectContent>
+        </Select>
+      </div>
+
+      <div className="space-y-4">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="space-y-2">
             <label className="text-sm font-medium">Input HTML (English)</label>

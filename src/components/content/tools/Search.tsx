@@ -84,7 +84,9 @@ const Search = ({
     setTotalProgress(0);
 
     try {
-      const searchResults = await searchGoogle(
+      // Step 1: Get search results
+      setProgressMessage("Searching for results...");
+      const initialResults = await searchGoogle(
         keyword,
         selectedCountry,
         config.apiKey,
@@ -100,22 +102,46 @@ const Search = ({
         },
       );
 
+      // Step 2: Fetch content for each result
+      setProgressMessage("Fetching content for results...");
+      setCurrentProgress(0);
+      setTotalProgress(initialResults.length);
+      
+      const resultsWithContent = [];
+      let errorCount = 0;
+      
+      for (let i = 0; i < initialResults.length; i++) {
+        const result = initialResults[i];
+        setCurrentProgress(i + 1);
+        setProgressMessage(`Fetching content for result ${i + 1}/${initialResults.length}...`);
+        
+        try {
+          // Fetch content for each result
+          const content = await fetchPageContent(result.url);
+          resultsWithContent.push({
+            ...result,
+            htmlContent: content,
+            searchKeyword: keyword,
+          });
+        } catch (error) {
+          console.error(`Error fetching content for ${result.url}:`, error);
+          resultsWithContent.push({
+            ...result,
+            error: error instanceof Error ? error.message : "Failed to fetch content",
+            searchKeyword: keyword,
+          });
+          errorCount++;
+        }
+      }
+
       // Check if any results have errors
-      const hasContentErrors = searchResults.some((result) => result.error);
-      setHasErrors(hasContentErrors);
+      setHasErrors(errorCount > 0);
+      setResults(resultsWithContent);
+      onComplete(resultsWithContent);
 
-      // Add keyword to results
-      const resultsWithKeyword = searchResults.map((result) => ({
-        ...result,
-        searchKeyword: keyword,
-      }));
-
-      setResults(resultsWithKeyword);
-      onComplete(resultsWithKeyword);
-
-      if (hasContentErrors) {
+      if (errorCount > 0) {
         setProgressMessage(
-          "Some content couldn't be fetched due to access restrictions. Results may be incomplete.",
+          `Search complete with ${errorCount} errors. Some content couldn't be fetched.`
         );
       } else {
         setProgressMessage("Search complete!");
