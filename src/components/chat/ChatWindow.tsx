@@ -17,16 +17,25 @@ import {
   sendMessageToGemini,
   getActiveApiKey,
 } from "@/lib/gemini";
+import { SearchCredentials } from "@/lib/searchConfig";
 
 const ChatWindow = () => {
   const [mode, setMode] = useState<"search" | "chat">("search");
   const [apiKeys, setApiKeys] = useState<StoredApiKey[]>([]);
 
   useEffect(() => {
-    const savedKeys = loadApiKeys();
-    if (savedKeys.length > 0) {
-      setApiKeys(savedKeys);
-    }
+    const fetchApiKeys = async () => {
+      try {
+        const savedKeys = await loadApiKeys();
+        if (savedKeys.length > 0) {
+          setApiKeys(savedKeys);
+        }
+      } catch (error) {
+        console.error("Error loading API keys:", error);
+      }
+    };
+    
+    fetchApiKeys();
   }, []);
   const [selectedModel, setSelectedModel] = useState("gemini-1.0-pro");
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -35,7 +44,7 @@ const ChatWindow = () => {
   const [selectedCountry, setSelectedCountry] = useState("us");
   const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
   const [isLoading, setIsLoading] = useState(false);
-  const [config, setConfig] = useState<GoogleSearchConfig | null>(null);
+  const [config, setConfig] = useState<SearchCredentials | null>(null);
 
   const handleSearch = async () => {
     if (!keyword.trim()) return;
@@ -58,18 +67,23 @@ const ChatWindow = () => {
       // Fetch and process content for each result
       const processedResults = await Promise.all(
         results.map(async (result) => {
-          const { content: htmlContent, error } = await fetchPageContent(
-            result.url,
-          );
-          const markdownContent = htmlContent
-            ? htmlToMarkdown(htmlContent)
-            : "";
-          return {
-            ...result,
-            htmlContent,
-            markdownContent,
-            error,
-          };
+          try {
+            const htmlContent = await fetchPageContent(result.url);
+            const markdownContent = htmlContent ? htmlToMarkdown(htmlContent) : "";
+            return {
+              ...result,
+              htmlContent,
+              markdownContent,
+              error: undefined
+            };
+          } catch (error) {
+            return {
+              ...result,
+              htmlContent: "",
+              markdownContent: "",
+              error: error instanceof Error ? error.message : "Unknown error"
+            };
+          }
         }),
       );
 

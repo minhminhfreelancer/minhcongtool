@@ -11,10 +11,10 @@ import { Search } from "lucide-react";
 import { COUNTRY_CODES } from "@/types/search";
 import ConfigGuide from "./ConfigGuide";
 import ConfigManager from "./ConfigManager";
-import { GoogleSearchConfig } from "@/lib/config";
+import { SearchCredentials } from "@/lib/searchConfig";
 
 export interface SearchHeaderProps {
-  onConfigChange: (config: GoogleSearchConfig) => void;
+  onConfigChange: (config: SearchCredentials) => void;
   keyword: string;
   onKeywordChange: (keyword: string) => void;
   selectedCountry: string;
