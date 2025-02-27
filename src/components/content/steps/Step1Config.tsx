@@ -34,6 +34,20 @@ const Step1Config = ({
   const [temperature, setTemperature] = useState(0.7);
   const [topP, setTopP] = useState(0.7);
   const [maxTokens, setMaxTokens] = useState(32000);
+  
+  // Update max tokens when model changes
+  useEffect(() => {
+    const model = AVAILABLE_MODELS.find(m => m.name === selectedModel);
+    if (model) {
+      // Use the model's maxOutputTokens if available, otherwise calculate based on tokenLimit
+      const modelMaxTokens = model.maxOutputTokens || 
+                            (model.tokenLimit === Infinity ? 32000 : Math.floor(model.tokenLimit * 0.4));
+      
+      if (maxTokens > modelMaxTokens) {
+        setMaxTokens(modelMaxTokens);
+      }
+    }
+  }, [selectedModel]);
   const [searchConfig, setSearchConfig] = useState<SearchCredentials | null>(null);
   const [isConfigValid, setIsConfigValid] = useState(false);
 
@@ -145,16 +159,34 @@ const Step1Config = ({
             </Select>
 
             {currentModel && (
-              <div className="mt-2 text-sm text-slate-500">
-                <div className="flex gap-4">
+              <div className="mt-2 text-sm text-slate-500 space-y-1">
+                <div className="flex gap-4 flex-wrap">
                   <span>
                     Tokens: {currentModel.tokenLimit.toLocaleString()}
                   </span>
                   <span>Requests/min: {currentModel.requestsPerMin}</span>
+                  {currentModel.releaseStage && (
+                    <span>Stage: {currentModel.releaseStage}</span>
+                  )}
                 </div>
-                <div className="text-xs mt-1">
+                {currentModel.knowledgeCutoff && (
+                  <div className="text-xs">
+                    Knowledge cutoff: {currentModel.knowledgeCutoff}
+                  </div>
+                )}
+                <div className="text-xs">
                   Features: {currentModel.features.join(", ")}
                 </div>
+                {currentModel.inputTypes && (
+                  <div className="text-xs">
+                    Input types: {currentModel.inputTypes.join(", ")}
+                  </div>
+                )}
+                {currentModel.outputTypes && (
+                  <div className="text-xs">
+                    Output types: {currentModel.outputTypes.join(", ")}
+                  </div>
+                )}
               </div>
             )}
           </div>
@@ -207,11 +239,13 @@ const Step1Config = ({
                 value={[maxTokens]}
                 onValueChange={([value]) => setMaxTokens(value)}
                 min={1}
-                max={32000}
+                max={currentModel?.maxOutputTokens || 
+                    (currentModel?.tokenLimit === Infinity ? 32000 : Math.floor(currentModel?.tokenLimit * 0.4) || 32000)}
                 step={1000}
               />
               <p className="text-xs text-muted-foreground">
-                Maximum length of generated response
+                Maximum length of generated response (up to {currentModel?.maxOutputTokens?.toLocaleString() || 
+                (currentModel?.tokenLimit === Infinity ? "32,000" : Math.floor(currentModel?.tokenLimit * 0.4).toLocaleString() || "32,000")} tokens for {selectedModel})
               </p>
             </div>
           </div>

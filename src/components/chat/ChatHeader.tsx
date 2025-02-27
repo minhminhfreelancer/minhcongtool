@@ -26,14 +26,16 @@ const ChatHeader = ({
 }: ChatHeaderProps) => {
   const currentModel = AVAILABLE_MODELS.find((m) => m.name === selectedModel);
 
-  // Group models by family and type
-  const geminiStandardModels = AVAILABLE_MODELS.filter(
-    (m) => m.name.startsWith("gemini") && !m.name.includes("flash"),
+  // Group models by family and version
+  const gemini2Models = AVAILABLE_MODELS.filter(
+    (m) => m.name.startsWith("gemini-2"),
   );
-  const geminiFlashModels = AVAILABLE_MODELS.filter(
-    (m) => m.name.startsWith("gemini") && m.name.includes("flash"),
+  const gemini15Models = AVAILABLE_MODELS.filter(
+    (m) => m.name.startsWith("gemini-1.5"),
   );
-  const palmModels = AVAILABLE_MODELS.filter((m) => m.name.startsWith("palm2"));
+  const gemini10Models = AVAILABLE_MODELS.filter(
+    (m) => m.name.startsWith("gemini-1.0"),
+  );
 
   return (
     <div className="flex items-center justify-between gap-4 bg-slate-50 rounded-lg p-4 border border-slate-200">
@@ -45,41 +47,43 @@ const ChatHeader = ({
           <SelectContent className="bg-white border-slate-200">
             <SelectGroup>
               <SelectLabel className="text-slate-500">
-                Gemini Standard Models
+                Gemini 2.0 Models
               </SelectLabel>
-              {geminiStandardModels.map((model) => (
+              {gemini2Models.map((model) => (
                 <SelectItem
                   key={model.name}
                   value={model.name}
                   className="text-slate-900 hover:bg-slate-100"
                 >
-                  {model.name}
+                  {model.name} {model.releaseStage && `(${model.releaseStage})`}
                 </SelectItem>
               ))}
             </SelectGroup>
             <SelectGroup>
               <SelectLabel className="text-slate-500">
-                Gemini Flash Models
+                Gemini 1.5 Models
               </SelectLabel>
-              {geminiFlashModels.map((model) => (
+              {gemini15Models.map((model) => (
                 <SelectItem
                   key={model.name}
                   value={model.name}
                   className="text-slate-900 hover:bg-slate-100"
                 >
-                  {model.name}
+                  {model.name} {model.releaseStage && `(${model.releaseStage})`}
                 </SelectItem>
               ))}
             </SelectGroup>
             <SelectGroup>
-              <SelectLabel className="text-slate-500">PaLM2 Models</SelectLabel>
-              {palmModels.map((model) => (
+              <SelectLabel className="text-slate-500">
+                Gemini 1.0 Models
+              </SelectLabel>
+              {gemini10Models.map((model) => (
                 <SelectItem
                   key={model.name}
                   value={model.name}
                   className="text-slate-900 hover:bg-slate-100"
                 >
-                  {model.name}
+                  {model.name} {model.releaseStage && `(${model.releaseStage})`}
                 </SelectItem>
               ))}
             </SelectGroup>
@@ -92,12 +96,24 @@ const ChatHeader = ({
       <div className="text-sm text-slate-500">
         {currentModel && (
           <div className="flex flex-col gap-1">
-            <div className="flex gap-4">
-              <span>Tokens: {currentModel.tokenLimit.toLocaleString()}</span>
+            <div className="flex gap-4 flex-wrap">
+              <span>Context: {currentModel.tokenLimit.toLocaleString()}</span>
+              {currentModel.maxOutputTokens && (
+                <span>Max Output: {currentModel.maxOutputTokens.toLocaleString()}</span>
+              )}
               <span>Requests/min: {currentModel.requestsPerMin}</span>
+              {currentModel.releaseStage && (
+                <span>Stage: {currentModel.releaseStage}</span>
+              )}
             </div>
+            {currentModel.knowledgeCutoff && (
+              <div className="text-xs">
+                Knowledge cutoff: {currentModel.knowledgeCutoff}
+              </div>
+            )}
             <div className="text-xs">
-              Features: {currentModel.features.join(", ")}
+              Features: {currentModel.features.slice(0, 3).join(", ")}
+              {currentModel.features.length > 3 ? "..." : ""}
             </div>
           </div>
         )}

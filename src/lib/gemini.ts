@@ -10,6 +10,9 @@ export async function sendMessageToGemini(
   message: string,
   apiKey: string,
   model: string = "gemini-1.0-pro",
+  maxTokens: number = 32000,
+  temperature: number = 0.7,
+  topP: number = 0.7,
 ): Promise<string> {
   try {
     const response = await fetch(
@@ -29,6 +32,11 @@ export async function sendMessageToGemini(
               ],
             },
           ],
+          generationConfig: {
+            maxOutputTokens: maxTokens,
+            temperature: temperature,
+            topP: topP,
+          },
         }),
       },
     );

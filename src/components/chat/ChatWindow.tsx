@@ -18,6 +18,7 @@ import {
   getActiveApiKey,
 } from "@/lib/gemini";
 import { SearchCredentials } from "@/lib/searchConfig";
+import { AVAILABLE_MODELS } from "@/types/models";
 
 const ChatWindow = () => {
   const [mode, setMode] = useState<"search" | "chat">("search");
@@ -142,10 +143,24 @@ const ChatWindow = () => {
     setIsProcessing(true);
 
     try {
+      // Get model info to determine appropriate max tokens
+      const modelInfo = AVAILABLE_MODELS.find(m => m.name === selectedModel);
+      // Use the model's maxOutputTokens if available, otherwise calculate based on tokenLimit
+      const modelMaxTokens = modelInfo?.maxOutputTokens || 
+                            (modelInfo?.tokenLimit === Infinity ? 32000 : 
+                            modelInfo?.tokenLimit ? Math.floor(modelInfo.tokenLimit * 0.4) : 32000);
+      
+      // Default values for other parameters
+      const temperature = 0.7; // Default temperature
+      const topP = 0.7; // Default top_p
+      
       const response = await sendMessageToGemini(
         message,
         activeKey,
         selectedModel,
+        modelMaxTokens,
+        temperature,
+        topP
       );
       setMessages((prev) => [
         ...prev,
