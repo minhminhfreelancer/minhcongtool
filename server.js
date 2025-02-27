@@ -2,10 +2,19 @@ import express from "express";
 import cors from "cors";
 import puppeteer from "puppeteer";
 import rateLimit from "express-rate-limit";
-import cheerio from "cheerio";
+import * as cheerio from "cheerio";
+import dotenv from "dotenv";
+
+// Load environment variables from .env file
+dotenv.config();
 
 const app = express();
 let browser;
+
+// Get API keys from environment variables
+const GEMINI_API_KEYS = process.env.GEMINI_API_KEYS ? process.env.GEMINI_API_KEYS.split(',') : [];
+const GOOGLE_SEARCH_API_KEY = process.env.GOOGLE_SEARCH_API_KEY || '';
+const GOOGLE_SEARCH_ENGINE_ID = process.env.GOOGLE_SEARCH_ENGINE_ID || '';
 
 // Enable CORS for Tempo platform
 app.use(
@@ -191,14 +200,37 @@ app.get("/fetch-content", async (req, res) => {
   }
 });
 
-const PORT = process.env.PORT || 3001;
-const HOST = process.env.HOST || "0.0.0.0";
-
-// Initialize browser when server starts
 // Health check endpoint
 app.get("/", (req, res) => {
   res.json({ status: "ok" });
 });
+
+// API endpoint to get Gemini API keys
+app.get("/api/gemini-keys", (req, res) => {
+  const apiKeys = GEMINI_API_KEYS.map(key => ({
+    key,
+    isActive: false
+  }));
+  
+  if (apiKeys.length > 0) {
+    apiKeys[0].isActive = true;
+  }
+  
+  res.json({ apiKeys });
+});
+
+// API endpoint to get search configuration
+app.get("/api/search-config", (req, res) => {
+  const config = {
+    apiKey: GOOGLE_SEARCH_API_KEY,
+    searchEngineId: GOOGLE_SEARCH_ENGINE_ID
+  };
+  
+  res.json({ config });
+});
+
+const PORT = process.env.PORT || 3001;
+const HOST = process.env.HOST || "0.0.0.0";
 
 app.listen(PORT, HOST, async () => {
   console.log(`Proxy server running on port ${PORT}`);
