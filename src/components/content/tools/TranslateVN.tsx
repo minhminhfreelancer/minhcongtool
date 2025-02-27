@@ -68,15 +68,15 @@ const TranslateVN = ({ modelConfig, onComplete, onBack }: TranslateVNProps) => {
     const chunks = chunkHtml(html);
     let translatedHtml = "";
     
-    // Use the path relative to the current working directory
-    const translationServerPath = "../translate_for_VN";
+    // Use the correct server URL
+    const translationServerUrl = "http://localhost:3000";
     
     for (let i = 0; i < chunks.length; i++) {
       setProgressMessage(`Translating chunk ${i + 1}/${chunks.length}...`);
       
       try {
         // Note: The VN translation tool uses the root endpoint
-        const response = await fetch(`${translationServerPath}/`, {
+        const response = await fetch(translationServerUrl, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -86,6 +86,10 @@ const TranslateVN = ({ modelConfig, onComplete, onBack }: TranslateVNProps) => {
             html: chunks[i],
           }),
         });
+        
+        if (!response.ok) {
+          throw new Error(`Server responded with status: ${response.status}`);
+        }
         
         const data = await response.json();
         if (data.success) {
@@ -119,8 +123,8 @@ const TranslateVN = ({ modelConfig, onComplete, onBack }: TranslateVNProps) => {
     setProgressMessage("Preparing translation...");
     
     try {
-      // Use direct path to the translation server
-      const serverUrl = "../translate_for_VN";
+      // Use the correct server URL
+      const serverUrl = "http://localhost:3000";
       
       // For small content, translate directly
       if (htmlInput.length < 5000) {
@@ -135,6 +139,10 @@ const TranslateVN = ({ modelConfig, onComplete, onBack }: TranslateVNProps) => {
             html: htmlInput,
           }),
         });
+
+        if (!response.ok) {
+          throw new Error(`Server responded with status: ${response.status}`);
+        }
 
         const data = await response.json();
         if (data.success) {

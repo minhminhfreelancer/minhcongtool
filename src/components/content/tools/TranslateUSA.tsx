@@ -72,14 +72,14 @@ const TranslateUSA = ({ modelConfig, onComplete, onBack }: TranslateUSAProps) =>
     const chunks = chunkHtml(html);
     let translatedHtml = "";
     
-    // Use the path relative to the current working directory
-    const translationServerPath = "../translate_for_USA";
+    // Use the correct server URL
+    const translationServerUrl = "http://localhost:3000/translate-html";
     
     for (let i = 0; i < chunks.length; i++) {
       setProgressMessage(`Translating chunk ${i + 1}/${chunks.length}...`);
       
       try {
-        const response = await fetch(`${translationServerPath}/translate-html`, {
+        const response = await fetch(translationServerUrl, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -89,6 +89,10 @@ const TranslateUSA = ({ modelConfig, onComplete, onBack }: TranslateUSAProps) =>
             html: chunks[i],
           }),
         });
+        
+        if (!response.ok) {
+          throw new Error(`Server responded with status: ${response.status}`);
+        }
         
         const data = await response.json();
         if (data.success) {
@@ -122,8 +126,8 @@ const TranslateUSA = ({ modelConfig, onComplete, onBack }: TranslateUSAProps) =>
     setProgressMessage("Preparing translation...");
     
     try {
-      // Use direct path to the translation server
-      const serverUrl = "../translate_for_USA/translate-html";
+      // Use the correct server URL
+      const serverUrl = "http://localhost:3000/translate-html";
       
       // For small content, translate directly
       if (htmlInput.length < 5000) {
@@ -137,6 +141,10 @@ const TranslateUSA = ({ modelConfig, onComplete, onBack }: TranslateUSAProps) =>
             html: htmlInput,
           }),
         });
+
+        if (!response.ok) {
+          throw new Error(`Server responded with status: ${response.status}`);
+        }
 
         const data = await response.json();
         if (data.success) {
@@ -182,9 +190,11 @@ const TranslateUSA = ({ modelConfig, onComplete, onBack }: TranslateUSAProps) =>
     }
 
     setIsLoading(true);
+    setProgressMessage("Translating text...");
+    
     try {
-      // Use direct path to the translation server
-      const serverUrl = "../translate_for_USA/translate-text";
+      // Use the correct server URL
+      const serverUrl = "http://localhost:3000/translate-text";
       
       const response = await fetch(serverUrl, {
         method: "POST",
@@ -194,6 +204,10 @@ const TranslateUSA = ({ modelConfig, onComplete, onBack }: TranslateUSAProps) =>
           text: textInput,
         }),
       });
+
+      if (!response.ok) {
+        throw new Error(`Server responded with status: ${response.status}`);
+      }
 
       const data = await response.json();
       if (data.success) {
@@ -214,6 +228,7 @@ const TranslateUSA = ({ modelConfig, onComplete, onBack }: TranslateUSAProps) =>
       });
     } finally {
       setIsLoading(false);
+      setProgressMessage("");
     }
   };
 
