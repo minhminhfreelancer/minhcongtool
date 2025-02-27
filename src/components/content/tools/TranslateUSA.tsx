@@ -38,6 +38,76 @@ const TranslateUSA = ({ modelConfig, onComplete, onBack }: TranslateUSAProps) =>
     (m) => m.name.startsWith("gemini") && m.name.includes("flash"),
   );
 
+  // Function to chunk HTML content for better translation
+  const chunkHtml = (html: string, maxChunkSize = 5000): string[] => {
+    // If content is small enough, return as is
+    if (html.length <= maxChunkSize) return [html];
+    
+    const chunks: string[] = [];
+    let currentChunk = "";
+    
+    // Simple tag-aware splitting
+    const lines = html.split(/(<[^>]+>|\n)/g);
+    
+    for (const line of lines) {
+      // If adding this line would exceed the chunk size, start a new chunk
+      if (currentChunk.length + line.length > maxChunkSize && currentChunk.length > 0) {
+        chunks.push(currentChunk);
+        currentChunk = "";
+      }
+      
+      currentChunk += line;
+    }
+    
+    // Add the last chunk if it's not empty
+    if (currentChunk.length > 0) {
+      chunks.push(currentChunk);
+    }
+    
+    return chunks;
+  };
+  
+  // Function to translate HTML content with chunking
+  const translateHtmlWithChunking = async (html: string, model: string): Promise<string> => {
+    const chunks = chunkHtml(html);
+    let translatedHtml = "";
+    
+    // Use the path relative to the current working directory
+    const translationServerPath = "../translate_for_USA";
+    
+    for (let i = 0; i < chunks.length; i++) {
+      setProgressMessage(`Translating chunk ${i + 1}/${chunks.length}...`);
+      
+      try {
+        const response = await fetch(`${translationServerPath}/translate-html`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            model,
+            sourceLang: "Vietnamese",
+            targetLang: "English",
+            html: chunks[i],
+          }),
+        });
+        
+        const data = await response.json();
+        if (data.success) {
+          translatedHtml += data.translatedHTML;
+        } else {
+          throw new Error(data.error || "Translation failed");
+        }
+      } catch (error) {
+        console.error(`Error translating chunk ${i + 1}:`, error);
+        throw error;
+      }
+    }
+    
+    return translatedHtml;
+  };
+  
+  // Progress message state
+  const [progressMessage, setProgressMessage] = useState("");
+
   const handleHtmlTranslate = async () => {
     if (!htmlInput.trim()) {
       toast({
@@ -49,41 +119,55 @@ const TranslateUSA = ({ modelConfig, onComplete, onBack }: TranslateUSAProps) =>
     }
 
     setIsLoading(true);
+    setProgressMessage("Preparing translation...");
+    
     try {
-      const response = await fetch("http://localhost:3000/translate-html", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          model: selectedModel,
-          sourceLang: "Vietnamese",
-          targetLang: "English",
-          html: htmlInput,
-        }),
-      });
+      // Use direct path to the translation server
+      const serverUrl = "../translate_for_USA/translate-html";
+      
+      // For small content, translate directly
+      if (htmlInput.length < 5000) {
+        const response = await fetch(serverUrl, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            model: selectedModel,
+            sourceLang: "Vietnamese",
+            targetLang: "English",
+            html: htmlInput,
+          }),
+        });
 
-      const data = await response.json();
-      if (data.success) {
-        setHtmlOutput(data.translatedHTML);
+        const data = await response.json();
+        if (data.success) {
+          setHtmlOutput(data.translatedHTML);
+          toast({
+            title: "Translation Complete",
+            description: "HTML content has been translated successfully",
+          });
+        } else {
+          throw new Error(data.error || "Translation failed");
+        }
+      } else {
+        // For larger content, use chunking
+        setProgressMessage("Content is large, breaking into chunks...");
+        const translatedHtml = await translateHtmlWithChunking(htmlInput, selectedModel);
+        setHtmlOutput(translatedHtml);
         toast({
           title: "Translation Complete",
           description: "HTML content has been translated successfully",
-        });
-      } else {
-        toast({
-          title: "Translation Error",
-          description: data.error || "An error occurred during translation",
-          variant: "destructive",
         });
       }
     } catch (error) {
       console.error("Translation error:", error);
       toast({
         title: "Translation Error",
-        description: error instanceof Error ? error.message : "An unknown error occurred",
+        description: "Could not connect to translation server. Please make sure the translation server is running at the correct path.",
         variant: "destructive",
       });
     } finally {
       setIsLoading(false);
+      setProgressMessage("");
     }
   };
 
@@ -99,7 +183,10 @@ const TranslateUSA = ({ modelConfig, onComplete, onBack }: TranslateUSAProps) =>
 
     setIsLoading(true);
     try {
-      const response = await fetch("http://localhost:3000/translate-text", {
+      // Use direct path to the translation server
+      const serverUrl = "../translate_for_USA/translate-text";
+      
+      const response = await fetch(serverUrl, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -116,17 +203,13 @@ const TranslateUSA = ({ modelConfig, onComplete, onBack }: TranslateUSAProps) =>
           description: "Text has been translated successfully",
         });
       } else {
-        toast({
-          title: "Translation Error",
-          description: data.error || "An error occurred during translation",
-          variant: "destructive",
-        });
+        throw new Error(data.error || "Translation failed");
       }
     } catch (error) {
       console.error("Translation error:", error);
       toast({
         title: "Translation Error",
-        description: error instanceof Error ? error.message : "An unknown error occurred",
+        description: "Could not connect to translation server. Please make sure the translation server is running at the correct path.",
         variant: "destructive",
       });
     } finally {
@@ -233,6 +316,18 @@ const TranslateUSA = ({ modelConfig, onComplete, onBack }: TranslateUSAProps) =>
               </div>
             </div>
           </div>
+          {isLoading && progressMessage && (
+            <div className="p-4 bg-blue-50 border border-blue-200 rounded-md mb-4">
+              <p className="text-blue-700 text-center">{progressMessage}</p>
+              <div className="w-full bg-slate-200 rounded-full h-2.5 mt-2">
+                <div
+                  className="bg-blue-500 h-2.5 rounded-full transition-all duration-300 animate-pulse"
+                  style={{ width: '100%' }}
+                ></div>
+              </div>
+            </div>
+          )}
+          
           <div className="flex justify-center">
             <Button 
               onClick={handleHtmlTranslate} 
