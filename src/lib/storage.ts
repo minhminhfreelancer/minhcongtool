@@ -8,7 +8,21 @@ export interface StoredApiKey {
 // Load API keys from the server
 export const loadApiKeys = async (): Promise<StoredApiKey[]> => {
   try {
-    // First try to load from the server
+    // Check if we have environment variables available
+    if (import.meta.env.VITE_GEMINI_API_KEYS) {
+      const keys = import.meta.env.VITE_GEMINI_API_KEYS.split(',').map(key => ({
+        key: key.trim(),
+        isActive: false
+      }));
+      
+      if (keys.length > 0) {
+        keys[0].isActive = true;
+      }
+      
+      return keys;
+    }
+    
+    // Try to load from the server
     const response = await fetch('/api/gemini-keys');
     
     if (response.ok) {

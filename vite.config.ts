@@ -1,4 +1,4 @@
-import path from "path";
+kimport path from "path";
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react-swc";
 import { tempo } from "tempo-devtools/dist/vite";
@@ -43,5 +43,12 @@ export default defineConfig({
     headers: {
       "Content-Type": "text/javascript",
     },
+    proxy: {
+      '/api': {
+        target: 'http://localhost:3001',
+        changeOrigin: true,
+        secure: false
+      }
+    }
   },
 });

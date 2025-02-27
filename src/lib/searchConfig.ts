@@ -8,7 +8,15 @@ export interface SearchCredentials {
 // Load search credentials from the server
 export const loadSearchCredentials = async (): Promise<SearchCredentials | null> => {
   try {
-    // First try to load from the server
+    // Check if we have environment variables available
+    if (import.meta.env.VITE_GOOGLE_SEARCH_API_KEY && import.meta.env.VITE_GOOGLE_SEARCH_ENGINE_ID) {
+      return {
+        apiKey: import.meta.env.VITE_GOOGLE_SEARCH_API_KEY,
+        searchEngineId: import.meta.env.VITE_GOOGLE_SEARCH_ENGINE_ID
+      };
+    }
+    
+    // Try to load from the server
     const response = await fetch('/api/search-config');
     
     if (response.ok) {
