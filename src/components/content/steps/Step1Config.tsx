@@ -84,6 +84,8 @@ const Step1Config = ({
       return;
     }
 
+    // For translation tools, we don't strictly need search config
+    // But we'll keep the validation for consistency
     onNext({
       model: selectedModel,
       temperature,

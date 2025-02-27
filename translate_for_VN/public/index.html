@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HTML Translator</title>
+    <style>
+        body { 
+            font-family: 'Segoe UI', Arial, sans-serif; 
+            margin: 0;
+            padding: 20px;
+            background: #f5f7fa;
+            min-height: 100vh;
+        }
+        .container {
+            max-width: 1800px;
+            margin: 0 auto;
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            display: grid;
+            grid-template-columns: minmax(300px, 1fr) minmax(300px, 1fr);
+            gap: 30px;
+            min-height: calc(100vh - 40px);
+        }
+        .input-section {
+            display: flex;
+            flex-direction: column;
+            min-width: 0; /* Prevents flex items from growing beyond container */
+        }
+        .output-section {
+            display: flex;
+            flex-direction: column;
+            background: #f8fafc;
+            border-radius: 8px;
+            padding: 20px;
+            min-width: 0; /* Prevents flex items from growing beyond container */
+        }
+        h1 {
+            color: #2c3e50;
+            margin-bottom: 10px;
+            border-bottom: 2px solid #eee;
+            grid-column: 1 / -1;
+            height: 50px; /* Fixed height */
+            line-height: 40px; /* Consistent line height */
+            padding: 0 0 10px 0; /* Adjusted padding to maintain consistent spacing */
+            display: flex;
+            align-items: center; /* Vertical centering */
+            box-sizing: border-box; /* Include padding in height calculation */
+        }
+        .form-group {
+            margin-bottom: 10px;
+        }
+        label {
+            display: block;
+            margin-bottom: 8px;
+            color: #34495e;
+            font-weight: 500;
+        }
+        textarea {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+            font-family: 'Consolas', monospace;
+            font-size: 14px;
+            line-height: 1.5;
+            resize: vertical;
+            transition: border-color 0.3s ease;
+            height: 100px;
+            box-sizing: border-box;
+        }
+        textarea:focus {
+            border-color: #4299e1;
+            outline: none;
+            box-shadow: 0 0 0 3px rgba(66, 153, 225, 0.1);
+        }
+        select, input[type="text"] {
+            width: 100%;
+            max-width: 400px;
+            padding: 10px;
+            border: 2px solid #e2e8f0;
+            border-radius: 6px;
+            font-size: 14px;
+            transition: border-color 0.3s ease;
+            box-sizing: border-box;
+        }
+        select:focus, input[type="text"]:focus {
+            border-color: #4299e1;
+            outline: none;
+            box-shadow: 0 0 0 3px rgba(66, 153, 225, 0.1);
+        }
+        .button-group {
+            margin-top: 20px;
+            display: flex;
+            gap: 10px;
+        }
+        button {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 6px;
+            font-size: 16px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        .translate-btn {
+            background: #4299e1;
+            color: white;
+        }
+        .translate-btn:hover {
+            background: #3182ce;
+        }
+        .copy-btn {
+            background: #48bb78;
+            color: white;
+        }
+        .copy-btn:hover {
+            background: #38a169;
+        }
+        #output {
+            flex-grow: 1;
+            overflow-y: auto;
+            background: white;
+            border-radius: 8px;
+            border: 2px solid #e2e8f0;
+        }
+        .progress-section {
+            margin: 20px 0;
+            padding: 20px;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        .part-progress {
+            display: flex;
+            align-items: center;
+            margin-bottom: 10px;
+            padding: 10px;
+            background: #f8fafc;
+            border-radius: 6px;
+        }
+        .part-indicator {
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            background: #e2e8f0;
+            margin-right: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            color: white;
+        }
+        .part-indicator.active {
+            background: #4299e1;
+        }
+        .part-indicator.complete {
+            background: #48bb78;
+        }
+        /* Responsive content styles */
+        .translated-content {
+            word-wrap: break-word;
+            overflow-wrap: break-word;
+            max-width: 100%;
+        }
+        .translated-content img {
+            max-width: 100%;
+            height: auto;
+            display: block;
+        }
+        .translated-content * {
+            max-width: 100%;
+            box-sizing: border-box;
+        }
+        /* Scrollbar styling */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e0;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #a0aec0;
+        }
+        /* Responsive layout */
+        @media (max-width: 768px) {
+            .container {
+                grid-template-columns: 1fr;
+                padding: 15px;
+            }
+            .input-section, .output-section {
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="input-section">
+            <div class="form-group">
+                <label for="htmlInput">HTML Content:</label>
+                <textarea id="htmlInput" placeholder="Paste HTML content here..."></textarea>
+            </div>
+
+            <div class="form-group">
+                <label for="modelSelect">Choose Model:</label>
+                <select id="modelSelect">
+                    <option value="gemini-1.5-flash">Gemini 1.5 Flash</option>
+                    <option value="gemini-1.5-pro">Gemini 1.5 Pro</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label for="sourceLang">Source Language:</label>
+                <input type="text" id="sourceLang" value="English">
+            </div>
+
+            <div class="form-group">
+                <label for="targetLang">Target Language:</label>
+                <input type="text" id="targetLang" value="Vietnamese">
+            </div>
+
+            <div class="button-group">
+                <button class="translate-btn" onclick="translateHTML()">Translate</button>
+                <button id="copyButton" class="copy-btn" onclick="copyToClipboard()" style="display: none;">Copy HTML</button>
+            </div>
+        </div>
+
+        <div class="output-section">
+            <div id="output"></div>
+        </div>
+    </div>
+    <script src="html-script.js"></script>
+</body>
+</html>
