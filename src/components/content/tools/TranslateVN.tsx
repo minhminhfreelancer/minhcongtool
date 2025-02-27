@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
 import { ModelConfig } from "../ContentWizard";
@@ -25,6 +25,23 @@ const TranslateVN = ({ modelConfig, onComplete, onBack }: TranslateVNProps) => {
   const [htmlInput, setHtmlInput] = useState("");
   const [htmlOutput, setHtmlOutput] = useState("");
   const [selectedModel, setSelectedModel] = useState(modelConfig.model);
+  const [apiKeys, setApiKeys] = useState<string[]>([]);
+  
+  // Get API keys from environment variables
+  useEffect(() => {
+    // Access environment variables from Cloudflare Pages
+    const geminiApiKeysStr = process.env.GEMINI_API_KEYS || '';
+    if (geminiApiKeysStr) {
+      setApiKeys(geminiApiKeysStr.split(',').map(key => key.trim()));
+    }
+  }, []);
+  
+  // Function to get a random API key
+  const getRandomApiKey = () => {
+    if (apiKeys.length === 0) return null;
+    const randomIndex = Math.floor(Math.random() * apiKeys.length);
+    return apiKeys[randomIndex];
+  };
   
   // Group models by family for the dropdown
   const geminiStandardModels = AVAILABLE_MODELS.filter(
@@ -35,7 +52,7 @@ const TranslateVN = ({ modelConfig, onComplete, onBack }: TranslateVNProps) => {
   );
   
   // Function to chunk HTML content for better translation
-  const chunkHtml = (html: string, maxChunkSize = 5000): string[] => {
+  const chunkHtml = (html: string, maxChunkSize = 2500): string[] => {
     // If content is small enough, return as is
     if (html.length <= maxChunkSize) return [html];
     
@@ -63,39 +80,88 @@ const TranslateVN = ({ modelConfig, onComplete, onBack }: TranslateVNProps) => {
     return chunks;
   };
   
-  // Function to translate HTML content with chunking
+  // Direct call to Gemini API for text translation
+  const translateTextWithGemini = async (text: string, model: string): Promise<string> => {
+    const apiKey = getRandomApiKey();
+    if (!apiKey) {
+      throw new Error("No API key available for Gemini");
+    }
+    
+    // Prepare the Gemini API endpoint URL
+    const apiEndpoint = `https://generativelanguage.googleapis.com/v1/models/${model}:generateContent?key=${apiKey}`;
+    
+    const prompt = `Translate the following text from English to Vietnamese, keeping the original formatting and preserving any HTML tags:
+
+Text to translate:
+${text}
+
+Please only return the translated text without any explanations or additional formatting.`;
+    
+    const payload = {
+      contents: [
+        {
+          parts: [
+            {
+              text: prompt
+            }
+          ]
+        }
+      ],
+      generationConfig: {
+        temperature: 0.2,
+        topK: 40,
+        topP: 0.95,
+        maxOutputTokens: 8192,
+      }
+    };
+    
+    try {
+      const response = await fetch(apiEndpoint, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify(payload)
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(`Gemini API error: ${JSON.stringify(errorData)}`);
+      }
+      
+      const data = await response.json();
+      
+      // Extract the translated text from the response
+      if (data.candidates && 
+          data.candidates[0] && 
+          data.candidates[0].content && 
+          data.candidates[0].content.parts && 
+          data.candidates[0].content.parts[0]) {
+        return data.candidates[0].content.parts[0].text;
+      } else {
+        throw new Error("Unexpected Gemini API response structure");
+      }
+    } catch (error) {
+      console.error("Translation error:", error);
+      throw error;
+    }
+  };
+  
+  // Function to translate HTML content with chunking using Gemini API
   const translateHtmlWithChunking = async (html: string, model: string): Promise<string> => {
     const chunks = chunkHtml(html);
     let translatedHtml = "";
-    
-    // Use the correct server URL
-    const translationServerUrl = "http://localhost:3000";
     
     for (let i = 0; i < chunks.length; i++) {
       setProgressMessage(`Translating chunk ${i + 1}/${chunks.length}...`);
       
       try {
-        // Note: The VN translation tool uses the root endpoint
-        const response = await fetch(translationServerUrl, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            model,
-            sourceLang: "English",
-            targetLang: "Vietnamese",
-            html: chunks[i],
-          }),
-        });
+        const translatedChunk = await translateTextWithGemini(chunks[i], model);
+        translatedHtml += translatedChunk;
         
-        if (!response.ok) {
-          throw new Error(`Server responded with status: ${response.status}`);
-        }
-        
-        const data = await response.json();
-        if (data.success) {
-          translatedHtml += data.translatedHTML;
-        } else {
-          throw new Error(data.error || "Translation failed");
+        // Add a small delay between chunks to avoid rate limiting
+        if (i < chunks.length - 1) {
+          await new Promise(resolve => setTimeout(resolve, 500));
         }
       } catch (error) {
         console.error(`Error translating chunk ${i + 1}:`, error);
@@ -119,41 +185,27 @@ const TranslateVN = ({ modelConfig, onComplete, onBack }: TranslateVNProps) => {
       return;
     }
 
+    if (apiKeys.length === 0) {
+      toast({
+        title: "Configuration Error",
+        description: "No Gemini API keys available. Please check environment variables.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setIsLoading(true);
     setProgressMessage("Preparing translation...");
     
     try {
-      // Use the correct server URL
-      const serverUrl = "http://localhost:3000";
-      
       // For small content, translate directly
-      if (htmlInput.length < 5000) {
-        // Note: The VN translation tool uses the root endpoint
-        const response = await fetch(serverUrl, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            model: selectedModel,
-            sourceLang: "English",
-            targetLang: "Vietnamese",
-            html: htmlInput,
-          }),
+      if (htmlInput.length < 2500) {
+        const translatedHtml = await translateTextWithGemini(htmlInput, selectedModel);
+        setHtmlOutput(translatedHtml);
+        toast({
+          title: "Translation Complete",
+          description: "HTML content has been translated successfully",
         });
-
-        if (!response.ok) {
-          throw new Error(`Server responded with status: ${response.status}`);
-        }
-
-        const data = await response.json();
-        if (data.success) {
-          setHtmlOutput(data.translatedHTML);
-          toast({
-            title: "Translation Complete",
-            description: "HTML content has been translated successfully",
-          });
-        } else {
-          throw new Error(data.error || "Translation failed");
-        }
       } else {
         // For larger content, use chunking
         setProgressMessage("Content is large, breaking into chunks...");
@@ -168,7 +220,7 @@ const TranslateVN = ({ modelConfig, onComplete, onBack }: TranslateVNProps) => {
       console.error("Translation error:", error);
       toast({
         title: "Translation Error",
-        description: "Could not connect to translation server. Please make sure the translation server is running at the correct path.",
+        description: "Failed to translate content. Please check your connection and try again.",
         variant: "destructive",
       });
     } finally {
