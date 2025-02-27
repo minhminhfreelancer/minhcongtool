@@ -1,9 +1,8 @@
 import { useState, useEffect } from "react";
-import Step1Config from "./steps/Step1Config";
-import Step2Search from "./steps/Step2Search";
-import ToolSelection from "./steps/ToolSelection";
-import TranslateUSA from "./steps/TranslateUSA";
-import TranslateVN from "./steps/TranslateVN";
+import Search from "./tools/Search";
+import ToolSelection from "./tools/ToolSelection";
+import TranslateUSA from "./tools/TranslateUSA";
+import TranslateVN from "./tools/TranslateVN";
 import { StoredApiKey, loadApiKeys } from "@/lib/storage";
 import { toast } from "@/components/ui/use-toast";
 import { loadSearchCredentials } from "@/lib/searchConfig";
@@ -25,16 +24,17 @@ export interface SearchCredentials {
 export type ToolType = "search" | "translate-usa" | "translate-vn";
 
 const ContentWizard = () => {
-  // Step management
-  const [currentStep, setCurrentStep] = useState(1);
   const [selectedTool, setSelectedTool] = useState<ToolType | null>(null);
-
-  // Search data
   const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
-
-  // Store configurations
-  const [modelConfig, setModelConfig] = useState<ModelConfig | null>(null);
   const [apiKeys, setApiKeys] = useState<StoredApiKey[]>([]);
+
+  // Default model configuration
+  const defaultModelConfig: ModelConfig = {
+    model: "gemini-1.5-flash",
+    temperature: 0.7,
+    topP: 0.7,
+    maxTokens: 32000
+  };
 
   // Load API keys on mount
   useEffect(() => {
@@ -57,37 +57,18 @@ const ContentWizard = () => {
     fetchApiKeys();
   }, []);
 
-  // Step 1: Configuration
-  const handleStep1Complete = (config: ModelConfig) => {
-    try {
-      setModelConfig(config);
-      setCurrentStep(1.5); // Go to tool selection step
-    } catch (error) {
-      console.error("Configuration error:", error);
-      toast({
-        title: "Error",
-        description:
-          error instanceof Error ? error.message : "An unknown error occurred",
-        variant: "destructive",
-      });
-    }
-  };
-
   // Tool Selection
   const handleToolSelect = (tool: ToolType) => {
     setSelectedTool(tool);
-    setCurrentStep(2);
   };
 
-  // Step 2: Search
-  const handleStep2Complete = (results: SearchResult[]) => {
+  // Search complete handler
+  const handleSearchComplete = (results: SearchResult[]) => {
     try {
       setSearchResults(results);
-      // Reset to step 1 after search is complete
-      setCurrentStep(1);
       toast({
         title: "Search Complete",
-        description: `Found ${results.length} results. You can now start a new search.`,
+        description: `Found ${results.length} results.`,
       });
     } catch (error) {
       console.error("Search error:", error);
@@ -102,8 +83,6 @@ const ContentWizard = () => {
 
   // Translation complete handlers
   const handleTranslationComplete = () => {
-    // Reset to step 1 after translation is complete
-    setCurrentStep(1);
     toast({
       title: "Translation Complete",
       description: "Translation has been completed successfully.",
@@ -120,42 +99,39 @@ const ContentWizard = () => {
     }
   };
 
+  // Back to tool selection
+  const handleBack = () => {
+    setSelectedTool(null);
+  };
+
   return (
     <div className="min-h-screen bg-slate-50 p-4">
-      {currentStep === 1 && (
-        <Step1Config
-          onNext={handleStep1Complete}
-          apiKeys={apiKeys}
-          onApiKeysChange={setApiKeys}
-        />
+      {!selectedTool && (
+        <ToolSelection onSelect={handleToolSelect} />
       )}
 
-      {currentStep === 1.5 && (
-        <ToolSelection onSelect={handleToolSelect} onBack={() => setCurrentStep(1)} />
-      )}
-
-      {currentStep === 2 && modelConfig && selectedTool === "search" && (
-        <Step2Search
+      {selectedTool === "search" && (
+        <Search
           getConfig={getSearchCredentials}
-          modelConfig={modelConfig}
-          onNext={handleStep2Complete}
-          onBack={() => setCurrentStep(1.5)}
+          modelConfig={defaultModelConfig}
+          onComplete={handleSearchComplete}
+          onBack={handleBack}
         />
       )}
 
-      {currentStep === 2 && modelConfig && selectedTool === "translate-usa" && (
+      {selectedTool === "translate-usa" && (
         <TranslateUSA
-          modelConfig={modelConfig}
+          modelConfig={defaultModelConfig}
           onComplete={handleTranslationComplete}
-          onBack={() => setCurrentStep(1.5)}
+          onBack={handleBack}
         />
       )}
 
-      {currentStep === 2 && modelConfig && selectedTool === "translate-vn" && (
+      {selectedTool === "translate-vn" && (
         <TranslateVN
-          modelConfig={modelConfig}
+          modelConfig={defaultModelConfig}
           onComplete={handleTranslationComplete}
-          onBack={() => setCurrentStep(1.5)}
+          onBack={handleBack}
         />
       )}
     </div>
