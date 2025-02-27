@@ -30,7 +30,7 @@ const TranslateVN = ({ modelConfig, onComplete, onBack }: TranslateVNProps) => {
   // Get API keys from environment variables
   useEffect(() => {
     // Access environment variables from Cloudflare Pages
-    const geminiApiKeysStr = process.env.GEMINI_API_KEYS || '';
+    const geminiApiKeysStr = import.meta.env.VITE_GEMINI_API_KEYS || '';
     if (geminiApiKeysStr) {
       setApiKeys(geminiApiKeysStr.split(',').map(key => key.trim()));
     }
